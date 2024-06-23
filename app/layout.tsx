@@ -1,8 +1,22 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import localfont from "next/font/local";
 import "./globals.css";
+import AuthProvider from "@/ContextProvider/AuthProvider";
+import { Provider } from "react-redux";
+import { store } from "@/redux/store";
+import { Toaster } from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"] });
+
+const avantgrade = localfont({
+  src: [
+    {
+      path: "../public/fonts/AVANTN.ttf",
+    },
+  ],
+  variable: "--font-avanta",
+});
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -16,7 +30,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={`${avantgrade.variable} ${inter.className}`}>
+        <Toaster />
+        {children}
+      </body>
     </html>
   );
 }
