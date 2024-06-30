@@ -25,6 +25,7 @@ export const workspaceSlice = createSlice({
       state.name = workspace.name;
       state.channels = workspace.channels;
       state.coWorkers = workspace.coWorkers;
+      state._id = workspace._id;
       // console.log("action", action.payload.data.workspace);
     },
   },

@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(4, 17, 12);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgb(0, 255, 166);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  width: 0 !important;
+}
+
 @layer base {
   :root {
     /* Name: custom color palette

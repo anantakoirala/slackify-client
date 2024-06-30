@@ -3,7 +3,7 @@ import { WorkspaceContext } from "@/ContextProvider/WorkSpaceProvider";
 import { RootState } from "@/redux/store";
 import { useFindWorkSpaceQuery } from "@/redux/workspace/workspaceApi";
 import { useParams } from "next/navigation";
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 
 type Props = {};
@@ -13,7 +13,10 @@ const Page = (props: Props) => {
 
   const [test, setTest] = useState(false);
 
-  console.log("name", name);
+  useEffect(() => {
+    localStorage.setItem("tid", "");
+    localStorage.setItem("type", "");
+  });
 
   return (
     <div>

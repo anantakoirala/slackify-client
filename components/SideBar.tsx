@@ -23,7 +23,7 @@ import {
   Warehouse,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import React, { useContext, useEffect, useState } from "react";
 import {
   Collapsible,
@@ -40,6 +40,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -51,9 +52,12 @@ import { WorkspaceContext } from "@/ContextProvider/WorkSpaceProvider";
 import TagInput from "./TagInput";
 import { useCreateChannelMutation } from "@/redux/api/channel/channelApi";
 import toast from "react-hot-toast";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { useSendInvitationMutation } from "@/redux/workspace/workspaceApi";
+import { setTid, setType } from "@/redux/misc/miscSlice";
+import { useNewChatMutation } from "@/redux/chat/chatApi";
+import { cn } from "@/lib/utils";
 
 type Props = {
   setShowSideBar: React.Dispatch<React.SetStateAction<boolean>>;
@@ -65,15 +69,23 @@ const formSchema = z.object({
 });
 
 const SideBar = ({ showSideBar }: Props) => {
-  const { id } = useParams();
+  const { id, typeid } = useParams();
+  const route = useRouter();
+  const dispatch = useDispatch();
   const [openMenu, setOpenMenu] = useState(false);
   const [open, setOpen] = useState(false);
   const [openMemberDialog, setOpenMemberDialog] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [isClient, setIsClient] = useState(false);
 
+  const [createNewChat] = useNewChatMutation();
+
   const [createChannel, { isSuccess, isError, error, data }] =
     useCreateChannelMutation();
+
+  const { huddleShow, huddleOn } = useSelector(
+    (state: RootState) => state.misc
+  );
 
   const [
     sendInvitation,
@@ -84,9 +96,12 @@ const SideBar = ({ showSideBar }: Props) => {
     },
   ] = useSendInvitationMutation();
 
-  const { name, channels, coWorkers } = useSelector(
-    (state: RootState) => state.workspace
-  );
+  const {
+    name,
+    channels,
+    coWorkers,
+    _id: organizationId,
+  } = useSelector((state: RootState) => state.workspace);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -104,6 +119,21 @@ const SideBar = ({ showSideBar }: Props) => {
   const onAddMember = (e: any) => {
     e.preventDefault();
     sendInvitation({ id: id, data: tags });
+  };
+
+  const openUserChatScreen = async (_id: string, type: string) => {
+    dispatch(setType(type));
+    // dispatch(setTid(_id));
+    localStorage.setItem("tid", _id);
+    localStorage.setItem("type", type);
+    console.log("organizationId", organizationId);
+    const response = await createNewChat({
+      _id,
+      type,
+      organizationId: organizationId,
+    });
+    console.log("response", response);
+    route.push(`/s/${id}/${_id}`);
   };
 
   useEffect(() => {
@@ -135,24 +165,19 @@ const SideBar = ({ showSideBar }: Props) => {
       setOpen(false);
     }
   }, [isSuccess, error, sendInvitationSuccess, sendInvitationError]);
-
   return (
     <div
       className={`${
         showSideBar
-          ? "sm:block mt-20 sm:mt-0  bg-background space-y-6 w-64 min-h-screen dark:text-slate-100  text-slate-800  fixed left-0 top-0 bottom-0 shadow-md overflow-y-scroll"
-          : "hidden mt-20 sm:mt-0 sm:block bg-background space-y-6 w-64 min-h-screen dark:text-slate-100  text-slate-800  fixed left-0 top-0 bottom-0 shadow-md border-r-2 border-r-secondary-foreground"
+          ? `sm:block mt-20 sm:mt-0 bg-background space-y-6 w-64 ${
+              huddleOn ? "h-[calc(100vh-160px)]" : "h-[calc(100vh-0px)]"
+            } dark:text-slate-100 text-slate-800 fixed left-0 top-0 bottom-0 shadow-md overflow-y-scroll`
+          : `hidden mt-20 sm:mt-0 sm:block bg-background space-y-6 w-64 ${
+              huddleOn ? "h-[calc(100vh-160px)]" : "h-[calc(100vh-0px)]"
+            } dark:text-slate-100 text-slate-800 fixed left-0 top-0 bottom-0 shadow-md border-r-2 border-r-secondary-foreground overflow-y-scroll`
       }`}
     >
       <div className="h-16 flex flex-col items-center justify-between px-2 ">
-        <Link href={"/"} className="h-10 mb-5">
-          <h3 className="font-bold text-4xl text-slate-800 dark:text-slate-50 px-3 text-foreground pt-[6px]">
-            Ecommerce
-          </h3>
-        </Link>
-        <Separator className="bg-border h-[1px]" />
-      </div>
-      <div className=" flex flex-col ">
         <Dialog open={open} onOpenChange={setOpen} modal>
           <DialogContent>
             <DialogHeader>
@@ -215,55 +240,137 @@ const SideBar = ({ showSideBar }: Props) => {
             </DialogHeader>
           </DialogContent>
         </Dialog>
-
-        <div className="flex items-center justify-between space-x-3 px-6 py-2 text-primary">
-          <Link href={""} className={""}>
-            <span>Chanels</span>
-          </Link>
-          <Plus
-            onClick={() => setOpen((prev) => !prev)}
-            className="w-5 h-5 rounded-sm bg-card"
-          />
-        </div>
-        <div className="px-2 flex flex-col gap-1">
-          {channels &&
-            channels.map((channel, index) => (
-              <Link
-                key={index}
-                href={"/"}
-                className="flex items-center  px-4 text-sm text-primary rounded-md bg-card/80 gap-1 "
-              >
-                #<span className="line-clamp-1">{channel.name}</span>
-              </Link>
-            ))}
-        </div>
-      </div>
-      <div className="px-2 h-[1px]">
-        <Separator className="bg-border" />
-      </div>
-
-      <div className=" flex flex-col mt-14">
-        <Link
-          href={""}
-          className={`flex items-center justify-between space-x-3 px-6 py-2 text-primary `}
-        >
-          <span>Direct Message</span>
-          <Plus
-            className="w-5 h-5 rounded-sm bg-card"
-            onClick={() => setOpenMemberDialog((prev) => !prev)}
-          />
+        <Link href={"/"} className="h-10 mb-5">
+          <h3 className="font-bold text-4xl text-slate-800 dark:text-slate-50 px-3 text-foreground pt-[6px]">
+            Ecommerce
+          </h3>
         </Link>
-        <div className="px-2 flex flex-col gap-1">
-          {coWorkers &&
-            coWorkers.map((coworker, index) => (
-              <Link
-                key={index}
-                href={"/"}
-                className="flex items-center  px-4 text-sm text-primary rounded-md bg-card/80 gap-1 "
-              >
-                #<span>{coworker.username}</span>
-              </Link>
-            ))}
+        <Separator className="bg-border h-[1px]" />
+      </div>
+      <div>
+        {/* channel */}
+        <div className=" flex flex-col ">
+          <div className="flex items-center justify-between space-x-3 px-6 py-2 text-primary">
+            <Link href={""} className={""}>
+              <span>Chanels</span>
+            </Link>
+            <Plus
+              onClick={() => setOpen((prev) => !prev)}
+              className="w-5 h-5 rounded-sm bg-card"
+            />
+          </div>
+          <div className="px-2 flex flex-col gap-1">
+            {channels &&
+              channels.map((channel, index) => (
+                <div
+                  key={index}
+                  onClick={() => openUserChatScreen(channel._id, "channel")}
+                  className={cn(
+                    `cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1 `,
+                    typeid?.toString() === channel._id.toString()
+                      ? "bg-primary text-black shadow-sm shadow-primary "
+                      : "bg-card/80 text-primary "
+                  )}
+                >
+                  #<span className="line-clamp-1">{channel.name}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+        {/* channel ends */}
+        {/* separator */}
+        <div className="px-2 h-[1px]">
+          <Separator className="bg-border" />
+        </div>
+        {/* seprator ends */}
+
+        {/* direct message */}
+        <div className=" flex flex-col mt-14">
+          <Link
+            href={""}
+            className={`flex items-center justify-between space-x-3 px-6 py-2 text-primary `}
+          >
+            <span>Direct Message</span>
+            <Plus
+              className="w-5 h-5 rounded-sm bg-card"
+              onClick={() => setOpenMemberDialog((prev) => !prev)}
+            />
+          </Link>
+          <div className="px-2 flex flex-col gap-2">
+            {coWorkers &&
+              coWorkers.map((coworker, index) => (
+                <div
+                  key={index}
+                  onClick={() => openUserChatScreen(coworker._id, "user")}
+                  className={cn(
+                    `cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1 `,
+                    typeid?.toString() === coworker._id.toString()
+                      ? "bg-primary text-black shadow-sm shadow-primary "
+                      : "bg-card/80 text-primary "
+                  )}
+                >
+                  #<span>{coworker.username}</span>
+                </div>
+              ))}
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
+              ananta
+            </div>
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
+              ananta
+            </div>
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
+              ananta
+            </div>
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
+              ananta
+            </div>
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
+              ananta
+            </div>
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
+              ananta
+            </div>
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
+              ananta
+            </div>
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
+              ananta
+            </div>
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
+              ananta
+            </div>
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
+              ananta
+            </div>
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
+              ananta
+            </div>
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
+              ananta
+            </div>
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
+              ananta
+            </div>
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
+              ananta
+            </div>
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
+              ananta
+            </div>
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
+              ananta
+            </div>
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
+              ananta
+            </div>
+
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
+              ananta
+            </div>
+            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-red-500/80 gap-1">
+              ananta
+            </div>
+          </div>
         </div>
       </div>
     </div>

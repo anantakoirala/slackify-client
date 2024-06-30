@@ -11,7 +11,6 @@ export const checkAuthentication = async (): Promise<boolean> => {
   await restApi
     .get("/api/v1/auth/me")
     .then((res) => {
-      console.log("check", res.data);
       isAuthenticated = true; // Set isAuthenticated based on response data
     })
     .catch((error: any) => {

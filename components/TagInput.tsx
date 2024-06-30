@@ -105,7 +105,7 @@ const TagInput: React.FC<Props> = ({ users, tags, setTags }: Props) => {
             {filteredUsers.map((user) => (
               <div
                 key={user}
-                className="cursor-pointer p-2 hover:bg-background"
+                className="cursor-pointer p-2 hover:bg-background text-primary"
                 onClick={() => handleUserClick(user)}
               >
                 {user}

@@ -13,7 +13,7 @@ export const workspaceApi = api.injectEndpoints({
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
         try {
           const result = await queryFulfilled;
-          console.log("result", result);
+          //console.log("result", result);
           dispatch(setWorkspace(result));
         } catch (error) {}
       },
