@@ -312,64 +312,6 @@ const SideBar = ({ showSideBar }: Props) => {
                   #<span>{coworker.username}</span>
                 </div>
               ))}
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
-              ananta
-            </div>
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
-              ananta
-            </div>
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
-              ananta
-            </div>
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
-              ananta
-            </div>
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
-              ananta
-            </div>
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
-              ananta
-            </div>
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
-              ananta
-            </div>
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
-              ananta
-            </div>
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
-              ananta
-            </div>
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
-              ananta
-            </div>
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
-              ananta
-            </div>
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
-              ananta
-            </div>
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
-              ananta
-            </div>
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
-              ananta
-            </div>
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
-              ananta
-            </div>
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
-              ananta
-            </div>
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
-              ananta
-            </div>
-
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-card/80 gap-1">
-              ananta
-            </div>
-            <div className="cursor-pointer flex items-center  px-4  text-sm rounded-md bg-red-500/80 gap-1">
-              ananta
-            </div>
           </div>
         </div>
       </div>

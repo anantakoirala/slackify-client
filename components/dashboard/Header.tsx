@@ -118,7 +118,6 @@ const Header = (props: Props) => {
       if (type === "user") {
         setType("user");
       }
-      console.log("type", type);
     }
   }, [setType, id, typeid]);
 

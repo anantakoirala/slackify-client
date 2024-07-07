@@ -64,18 +64,19 @@ const Page = (props: Props) => {
     });
 
     socket.on(NEW_MESSAAGE, (data) => {
-      console.log("Received data:", data);
-      setMessages((prevMessages) => [...prevMessages, data.message.content]);
+      console.log("receivedchat", data.message.chat);
+      console.log("Received data:", data.message);
+      if (data.message.chat === chatId) {
+        console.log("same chat id");
+        setMessages((prevMessages) => [...prevMessages, data.message]);
+      }
     });
-
-    console.log("Listening for ananta event");
 
     // Cleanup
     return () => {
       socket.off(NEW_MESSAAGE);
-      console.log("Cleaned up ananta listener");
     };
-  }, [socket]);
+  }, [socket, chatId, typeid]);
 
   useEffect(() => {
     const type = localStorage.getItem("type");
@@ -86,7 +87,6 @@ const Page = (props: Props) => {
         type,
         organizationId: _id,
       });
-      console.log("responseeee", response.data.chat.isGroup);
 
       if (response.error) {
         route.push(`/s/${_id}`);
@@ -115,7 +115,6 @@ const Page = (props: Props) => {
       if (type === "workspace") {
         route.push(`/s/${id}`);
       } else if (type === "user") {
-        console.log("userhello");
       } else if (type === "channel") {
         const response = await fetchChannelUsers();
         console.log("channel", response);
@@ -144,12 +143,14 @@ const Page = (props: Props) => {
                 </div>
                 <div className="flex flex-col">
                   <div>
-                    name{" "}
+                    {message.sender.username}
                     <span className="text-xs text-muted-foreground pl-2">
                       10:12 am
                     </span>
                   </div>
-                  <div className="text-sm text-muted-foreground">{message}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {message.content}
+                  </div>
                 </div>
               </div>
             ))}

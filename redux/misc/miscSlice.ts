@@ -27,7 +27,6 @@ export const miscSlice = createSlice({
       state.type = action.payload;
     },
     setTid: (state, action: PayloadAction<string>) => {
-      console.log("payload", action.payload);
       state.tid = action.payload;
     },
     setHuddleShow: (state, action) => {

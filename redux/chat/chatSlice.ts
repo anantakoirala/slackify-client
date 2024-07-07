@@ -20,7 +20,7 @@ export const chatSlice = createSlice({
       state.chatId = action.payload.data.chat._id;
     },
     setChatMembers: (state, action) => {
-      console.log("nenene", action.payload.data.chat.collaborators);
+      //console.log("nenene", action.payload.data.chat.collaborators);
       state.members = action.payload.data.chat.collaborators;
     },
     setName: (state, action) => {

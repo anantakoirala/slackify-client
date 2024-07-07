@@ -5,6 +5,8 @@ import WorkSpaceProvider from "@/ContextProvider/WorkSpaceProvider";
 import Header from "@/components/dashboard/Header";
 import { Provider, useSelector } from "react-redux";
 import { RootState, store } from "@/redux/store";
+import SocketProvider from "@/ContextProvider/SocketProvider";
+import AuthProvider from "@/ContextProvider/AuthProvider";
 
 export default function WorkspaceLayout({
   children,
@@ -15,7 +17,11 @@ export default function WorkspaceLayout({
 
   return (
     <div className="">
-      <Provider store={store}>{children}</Provider>
+      <Provider store={store}>
+        <AuthProvider>
+          <SocketProvider>{children}</SocketProvider>
+        </AuthProvider>
+      </Provider>
     </div>
   );
 }

@@ -4,9 +4,10 @@ import { createContext } from "react";
 import { useRouter } from "next/navigation";
 import { restApi } from "@/api";
 
-type AuthContextValue = {
+export type AuthContextValue = {
   name: string;
   email: string;
+  _id: string;
 };
 
 export const AuthContext = createContext<AuthContextValue | undefined>(
@@ -17,23 +18,30 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
-  const [result, setResult] = useState(false);
-  const [authenticatedUser, setAuthenticatedUser] =
-    useState<AuthContextValue>();
+  const [authenticatedUser, setAuthenticatedUser] = useState<
+    AuthContextValue | undefined
+  >(undefined);
+
   useEffect(() => {
     const fetchData = async () => {
-      setLoading((prev) => !prev);
+      setLoading(true);
       try {
         const response = await restApi.get("/api/v1/auth/me");
-        setAuthenticatedUser(response.data);
-        setLoading(false);
-        // Handle the response data
+        const userData: AuthContextValue = {
+          name: response.data.user.username,
+          email: response.data.user.email,
+          _id: response.data.user._id,
+        };
+        setAuthenticatedUser(userData);
       } catch (error: any) {
         if (error?.response?.status === 401) {
-          setLoading(false);
           router.push("/login");
+        } else {
+          console.error("Error fetching user data:", error);
+          // Handle other errors
         }
-        // Handle the error
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -41,10 +49,11 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [router]);
 
   const contextValue = useMemo(() => authenticatedUser, [authenticatedUser]);
-  console.log("AuthProvider re-rendered");
+
   if (loading) {
     return <p>Loading...</p>;
   }
+
   return (
     <>
       {authenticatedUser && (
