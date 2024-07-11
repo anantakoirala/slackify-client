@@ -45,16 +45,21 @@ const HuddleDialog = ({
   remoteStream,
 }: Props) => {
   useEffect(() => {
-    console.log("videoref111", videoref);
-    if (videoStream) {
-      if (videoref.current) {
+    console.log("videoref current:", videoref);
+    console.log("videoref2 current:", videoref2.current);
+
+    // Ensure videoStream and remoteStream are truthy before setting srcObject
+    setTimeout(() => {
+      if (videoStream && videoref.current) {
+        console.log("Setting local video stream");
         videoref.current.srcObject = videoStream;
       }
-      if (videoref2.current) {
+      if (remoteStream && videoref2.current) {
+        console.log("Setting remote video stream");
         videoref2.current.srcObject = remoteStream;
       }
-    }
-  }, [videoStream, huddleDialogOpen, videoref, videoref2, remoteStream]);
+    }, 20);
+  }, [videoStream, remoteStream, huddleDialogOpen, videoref, videoref2]);
 
   return (
     <Dialog
@@ -63,11 +68,6 @@ const HuddleDialog = ({
       modal
     >
       <DialogContent className="w-full max-w-xs sm:max-w-6xl">
-        <DialogHeader>
-          {/* <DialogTitle className="mb-2 text-primary">
-            Are you absolutely sure?
-          </DialogTitle> */}
-        </DialogHeader>
         <div
           className="w-full h-[75vh] flex flex-col items-center justify-center"
           style={{

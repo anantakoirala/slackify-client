@@ -17,7 +17,11 @@ import { useFindWorkSpaceQuery } from "@/redux/workspace/workspaceApi";
 import SocketProvider, {
   SocketContext,
 } from "@/ContextProvider/SocketProvider";
-import { setHuddleOn, setHuddleShow } from "@/redux/misc/miscSlice";
+import {
+  setHuddleOn,
+  setHuddleShow,
+  setSenderUserId,
+} from "@/redux/misc/miscSlice";
 import { Headphones, LucideMaximize } from "lucide-react";
 import HuddleDialog from "@/components/dailogs/HuddleDialog";
 import pattern from "../../../../public/backgroundd.png";
@@ -32,6 +36,7 @@ import {
 
 import { LuScreenShare, LuScreenShareOff } from "react-icons/lu";
 import { TbHeadphones, TbHeadphonesOff } from "react-icons/tb";
+import Huddle from "@/components/Huddle";
 
 const config = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -48,15 +53,18 @@ export default function WorkspaceLayout({
 }>) {
   const videoref = useRef<HTMLVideoElement>(null);
   const videoref2 = useRef<HTMLVideoElement>(null); // Assuming you have a second video reference
+  const fullScreenDiv = useRef<HTMLDivElement>(null);
+
   const route = useRouter();
   const dispatch = useDispatch();
 
   const { id, typeid } = useParams();
   const [userIdLeavingRoom, setUserIdLeavingRoom] = useState("");
-  const [showSideBar, setShowSideBar] = useState(false);
+
   const [huddleDialogOpen, setHuddleDialogOpen] = useState(false);
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [fullScreenMode, setFullScreenMode] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [screenSharing, setScreenSharing] = React.useState(false);
   const [audioEnabled, setAudioEnabled] = React.useState(true);
@@ -77,14 +85,37 @@ export default function WorkspaceLayout({
 
   const { data, isLoading, isError, error } = useFindWorkSpaceQuery(id);
   const { name } = useSelector((state: RootState) => state.workspace);
-  const { huddleShow, huddleOn, type, huddleUserName } = useSelector(
-    (state: RootState) => state.misc
-  );
+  const { huddleShow, huddleOn, type, huddleUserName, showSideBar } =
+    useSelector((state: RootState) => state.misc);
   const { name: chatName, chatId } = useSelector(
     (state: RootState) => state.chat
   );
 
+  const enterFullscreen = () => {
+    const elem = fullScreenDiv?.current;
+    if (elem) {
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+        setFullScreenMode(true);
+      }
+    }
+  };
+
+  const exitFullscreen = () => {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+      setFullScreenMode(false);
+      console.log("full screen exit");
+    }
+  };
+
   const handleHuddleDialogOpen = () => {
+    // if (!document.fullscreenElement) {
+    //   enterFullscreen();
+    // } else {
+    //   console.log("hello change bhayo");
+    //   exitFullscreen();
+    // }
     setHuddleDialogOpen((prev) => !prev);
   };
 
@@ -270,7 +301,7 @@ export default function WorkspaceLayout({
       });
 
       // Listen for the "join-room" event to trigger a call when another user joins
-      socket?.on("join-room", ({ roomId, otherUserId }) => {
+      socket?.on("join-room", ({ roomId, otherUserId, targetUserId }) => {
         console.log(`User ${otherUserId} joined room ${roomId}`);
         setConnectedUsers({ [otherUserId]: true });
       });
@@ -310,7 +341,6 @@ export default function WorkspaceLayout({
   ]);
 
   useEffect(() => {
-    console.log("pcrefs", pcRefs);
     async function stopStream() {
       const userId = authenticatedUser?._id;
       if (videoStream) {
@@ -337,11 +367,14 @@ export default function WorkspaceLayout({
             pcRefs.current[userId].close();
           }
           logActivePeerConnections();
+
           console.log("pcrefs", pcRefs.current[userId]);
         }
       }
     }
     if (huddleOn) {
+      const userId = authenticatedUser?._id;
+
       setUpWebRTC();
     } else {
       stopStream();
@@ -361,6 +394,7 @@ export default function WorkspaceLayout({
       socket?.off("answer");
       socket?.off("ice-candidate");
       socket?.off("room-leave");
+      socket?.off("incomming-call");
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [huddleOn, chatId]);
@@ -420,6 +454,23 @@ export default function WorkspaceLayout({
     }
   }, [videoStream, huddleDialogOpen, huddleOn, remoteStream]);
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (document.fullscreenElement) {
+        console.log("Fullscreen mode activated");
+      } else {
+        setFullScreenMode(false);
+        console.log("Fullscreen mode deactivated");
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
   if (isLoading) {
     return <>Loading...</>;
   }
@@ -446,16 +497,14 @@ export default function WorkspaceLayout({
       )}
 
       <div className="flex flex-row">
-        <div className="w-64 hidden sm:block relative">
+        <div className="w-64 block relative">
           <div className="h-full">
-            <SideBar
-              showSideBar={showSideBar}
-              setShowSideBar={setShowSideBar}
-            />
+            <SideBar showSideBar={showSideBar} />
           </div>
           {/* webcam section */}
           {huddleOn && !huddleDialogOpen && (
             <div
+              ref={fullScreenDiv}
               className={`w-full  bg-card ${
                 huddleOn ? "h-40 items-start" : "hidden items-center"
               } border border-primary rounded-tl-md rounded-tr-md absolute bottom-0 flex flex-col px-2 `}
@@ -471,6 +520,9 @@ export default function WorkspaceLayout({
                 className="w-full h-full  mb-1 rounded-sm"
                 style={{
                   backgroundImage: `url(${pattern.src})`,
+                  backgroundSize: "cover", // Ensures the image covers the entire div
+                  backgroundPosition: "center", // Centers the image
+                  backgroundRepeat: "no-repeat", // Prevents the image from repeating
                   objectFit: "cover",
                 }}
               >
@@ -505,7 +557,11 @@ export default function WorkspaceLayout({
                 <div className="flex flex-row w-full h-[21%]  mb-1 mt-1 px-2 items-center justify-center">
                   <div
                     onClick={toggleVideo}
-                    className="bg-primary rounded-md w-[1.9rem] h-[1.9rem] flex items-center justify-center m-1"
+                    className={`bg-primary rounded-md ${
+                      fullScreenMode
+                        ? "w-[5rem] h-[5rem]"
+                        : "w-[1.9rem] h-[1.9rem]"
+                    } flex items-center justify-center m-1`}
                   >
                     {!videoEnabled ? (
                       <BiVideoOff size="1.7rem" className="text-red-500" />

@@ -7,6 +7,9 @@ type InitialState = {
   huddleOn: boolean;
   huddleUserId: string;
   huddleUserName: string;
+  senderUserId: string;
+  showSideBar: boolean;
+  drawerOpen: boolean;
 };
 
 const initialState: InitialState = {
@@ -16,6 +19,9 @@ const initialState: InitialState = {
   huddleOn: false,
   huddleUserId: "",
   huddleUserName: "",
+  senderUserId: "",
+  showSideBar: true,
+  drawerOpen: false,
 };
 
 export const miscSlice = createSlice({
@@ -41,6 +47,15 @@ export const miscSlice = createSlice({
     setHuddleUserName: (state, action) => {
       state.huddleUserName = action.payload;
     },
+    setSenderUserId: (state, action) => {
+      state.senderUserId = action.payload;
+    },
+    setShowSideBar: (state, action) => {
+      state.showSideBar = action.payload;
+    },
+    setDrawerOpen: (state, action) => {
+      state.drawerOpen = action.payload;
+    },
   },
 });
 
@@ -51,4 +66,7 @@ export const {
   setHuddleOn,
   setHuddleUserId,
   setHuddleUserName,
+  setSenderUserId,
+  setShowSideBar,
+  setDrawerOpen,
 } = miscSlice.actions;

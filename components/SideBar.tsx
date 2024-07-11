@@ -7,6 +7,7 @@ import {
   CircleDollarSign,
   Disc2,
   ExternalLink,
+  Headphones,
   LayoutGrid,
   LayoutList,
   LogOut,
@@ -55,12 +56,13 @@ import toast from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { useSendInvitationMutation } from "@/redux/workspace/workspaceApi";
-import { setTid, setType } from "@/redux/misc/miscSlice";
+import { setSenderUserId, setTid, setType } from "@/redux/misc/miscSlice";
 import { useNewChatMutation } from "@/redux/chat/chatApi";
 import { cn } from "@/lib/utils";
+import { SocketContext } from "@/ContextProvider/SocketProvider";
+import { AuthContext } from "@/ContextProvider/AuthProvider";
 
 type Props = {
-  setShowSideBar: React.Dispatch<React.SetStateAction<boolean>>;
   showSideBar: boolean;
 };
 
@@ -83,9 +85,12 @@ const SideBar = ({ showSideBar }: Props) => {
   const [createChannel, { isSuccess, isError, error, data }] =
     useCreateChannelMutation();
 
-  const { huddleShow, huddleOn } = useSelector(
+  const { huddleShow, huddleOn, senderUserId } = useSelector(
     (state: RootState) => state.misc
   );
+
+  const socket = useContext(SocketContext);
+  const authenticatedUser = useContext(AuthContext);
 
   const [
     sendInvitation,
@@ -102,6 +107,8 @@ const SideBar = ({ showSideBar }: Props) => {
     coWorkers,
     _id: organizationId,
   } = useSelector((state: RootState) => state.workspace);
+
+  const { chatId, members } = useSelector((state: RootState) => state.chat);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -165,11 +172,41 @@ const SideBar = ({ showSideBar }: Props) => {
       setOpen(false);
     }
   }, [isSuccess, error, sendInvitationSuccess, sendInvitationError]);
+
+  useEffect(() => {
+    if (!socket) {
+      console.log("Socket is not initialized");
+      return;
+    }
+    if (huddleOn) {
+      socket.emit("incomming-call", {
+        chatId,
+        members: members.map(
+          (member: { _id: string; username: string }) => member._id
+        ),
+        targetId: typeid,
+        senderId: authenticatedUser?._id,
+      });
+    }
+    socket.on("incomming-call", (data) => {
+      console.log("receivedchat incomming call", data.message.chat);
+      console.log("Received data incomming call:", data.message);
+      console.log("sendetId:", data.message.senderId);
+      console.log("auth user id:", authenticatedUser?._id);
+      if (data.message.senderId !== authenticatedUser?._id) {
+        dispatch(setSenderUserId(data.message.senderId));
+      }
+    });
+
+    return () => {
+      socket.off("incomming-call");
+    };
+  }, [huddleOn, socket, chatId, members, typeid, authenticatedUser, dispatch]);
   return (
     <div
       className={`${
         showSideBar
-          ? `sm:block mt-20 sm:mt-0 bg-background space-y-6 w-64 ${
+          ? `sm:block  mt-20 sm:mt-0 bg-background space-y-6 w-64 ${
               huddleOn ? "h-[calc(100vh-160px)]" : "h-[calc(100vh-0px)]"
             } dark:text-slate-100 text-slate-800 fixed left-0 top-0 bottom-0 shadow-md overflow-y-scroll`
           : `hidden mt-20 sm:mt-0 sm:block bg-background space-y-6 w-64 ${
@@ -309,7 +346,15 @@ const SideBar = ({ showSideBar }: Props) => {
                       : "bg-card/80 text-primary "
                   )}
                 >
-                  #<span>{coworker.username}</span>
+                  #
+                  <div className="flex flex-1 flex-row items-center gap-10">
+                    <div className="  w-full">{coworker.username}</div>
+                    {senderUserId === coworker._id && (
+                      <Headphones className="w-4 h-4" />
+                    )}
+
+                    {/* {targetUserId} */}
+                  </div>
                 </div>
               ))}
           </div>

@@ -25,7 +25,14 @@ const chatApi = api.injectEndpoints({
         }
       },
     }),
+    getChatMessages: builder.query({
+      query: ({ chatId, page }) => ({
+        url: `/api/v1/chat/message/${chatId}?page=${page}`,
+        method: "GET",
+      }),
+      keepUnusedDataFor: 0,
+    }),
   }),
 });
 
-export const { useNewChatMutation } = chatApi;
+export const { useNewChatMutation, useGetChatMessagesQuery } = chatApi;

@@ -33,6 +33,7 @@ export default function Home() {
       restApi
         .get("/api/v1/workspace/my-workspaces")
         .then((res) => {
+          console.log("response", res);
           console.log("res", res.data.myWorkspaces);
           setWorkspaces(res.data.myWorkspaces);
         })

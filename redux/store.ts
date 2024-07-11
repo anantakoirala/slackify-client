@@ -7,6 +7,8 @@ import { miscSlice } from "./misc/miscSlice";
 import { chatSlice } from "./chat/chatSlice";
 import { channelSlice } from "./channel/channelSlice";
 
+console.log("env", process.env.NODE_ENV !== "production");
+
 export const store = configureStore({
   reducer: {
     [api.reducerPath]: api.reducer,

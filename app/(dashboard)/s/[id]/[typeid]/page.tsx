@@ -1,6 +1,9 @@
 "use client";
 import { SocketContext } from "@/ContextProvider/SocketProvider";
-import { useNewChatMutation } from "@/redux/chat/chatApi";
+import {
+  useGetChatMessagesQuery,
+  useNewChatMutation,
+} from "@/redux/chat/chatApi";
 import { RootState } from "@/redux/store";
 import { useParams, useRouter } from "next/navigation";
 import React, { useContext, useEffect, useRef, useState } from "react";
@@ -9,20 +12,36 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NEW_MESSAAGE } from "@/constants";
 import { useGetChannelUserMutation } from "@/redux/channel/channelApi";
 import { setType } from "@/redux/misc/miscSlice";
+import { AuthContext } from "@/ContextProvider/AuthProvider";
+import InfiniteScroll from "react-infinite-scroll-component";
 
 type Props = {};
 
 const Page = (props: Props) => {
+  const messageEndRef = useRef<HTMLDivElement>(null);
+  const messageStartRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef(null);
   const { id, typeid } = useParams();
+  const authenticatedUser = useContext(AuthContext);
   const dispatch = useDispatch();
 
   const type = localStorage.getItem("type");
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
+  const [isFetchingNewMessages, setIsFetchingNewMessages] = useState(false);
+  const [page, setPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(0);
+
   const { _id } = useSelector((state: RootState) => state.workspace);
   const { chatId, members } = useSelector((state: RootState) => state.chat);
+  const { huddleOn } = useSelector((state: RootState) => state.misc);
   const socket = useContext(SocketContext);
+
+  const { data: newMessages, isFetching } = useGetChatMessagesQuery({
+    chatId,
+    page,
+  });
 
   const [createNewChat] = useNewChatMutation();
 
@@ -31,6 +50,7 @@ const Page = (props: Props) => {
   const route = useRouter();
 
   const submitMessage = async () => {
+    setIsFetchingNewMessages(false);
     socket?.emit(NEW_MESSAAGE, {
       chatId,
       members: members.map(
@@ -124,11 +144,60 @@ const Page = (props: Props) => {
     fetchData();
   }, [type, id, route, getChannelUsers, typeid]);
 
+  useEffect(() => {
+    if (messageEndRef.current && !isFetchingNewMessages) {
+      messageEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isFetchingNewMessages]);
+
+  useEffect(() => {
+    //console.log("newMessages", newMessages);
+    if (newMessages && Array.isArray(newMessages.messages)) {
+      setMessages((prevMessages) => {
+        const reversedMessages = newMessages.messages.slice().reverse(); // Make a copy and reverse
+        return [...reversedMessages, ...prevMessages];
+      });
+    }
+  }, [newMessages]);
+
+  // useEffect(() => {
+  //   if (isFetching && messageStartRef.current) {
+  //     messageStartRef.current.scrollIntoView({ behavior: "auto" });
+  //   }
+  // }, [isFetching]);
+
+  const handleScroll = (e: any) => {
+    const initialScrollOffset = 10;
+    if (e.target.scrollTop === 0 && !isFetching) {
+      if (page < newMessages.totalPages) {
+        setPage((prevPage) => prevPage + 1);
+        setIsFetchingNewMessages(true);
+        if (scrollContainerRef.current) {
+          console.log("totalPages", newMessages.totalPages);
+          console.log("page", page);
+
+          console.log("scrolltop", scrollContainerRef.current.scrollTop);
+          setTimeout(() => {
+            scrollContainerRef?.current?.scrollTo({
+              top: scrollContainerRef.current.scrollTop + 100, // Adjust this value as needed
+              behavior: "smooth", // 'auto' or 'smooth'
+            });
+          }, 1000);
+        }
+        // Set scrollTop to a small value to scroll a little below the top
+      }
+    }
+  };
+
   return (
     <>
       <div className="flex-1 overflow-y-auto p-4 ">
-        <div className="overflow-y-hidden relative w-full text-primary mt-4   ">
-          {/* message */}
+        <div
+          className=" w-full text-primary h-[68vh] overflow-y-auto"
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+        >
+          <div ref={messageStartRef} />
           {messages &&
             messages.map((message, index) => (
               <div
@@ -145,7 +214,10 @@ const Page = (props: Props) => {
                   <div>
                     {message.sender.username}
                     <span className="text-xs text-muted-foreground pl-2">
-                      10:12 am
+                      {new Date(message.createdAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </span>
                   </div>
                   <div className="text-sm text-muted-foreground">
@@ -154,8 +226,7 @@ const Page = (props: Props) => {
                 </div>
               </div>
             ))}
-
-          {/* message ends */}
+          <div ref={messageEndRef} />
         </div>
       </div>
       <div className="p-4 bg-background ">

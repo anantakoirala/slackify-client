@@ -12,11 +12,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import Select, { MultiValue, ActionMeta } from "react-select";
 import { useNewChatMutation } from "@/redux/chat/chatApi";
 import {
+  setDrawerOpen,
   setHuddleOn,
   setHuddleShow,
   setHuddleUserId,
   setHuddleUserName,
 } from "@/redux/misc/miscSlice";
+import { FaBars } from "react-icons/fa";
 
 type Props = {};
 
@@ -43,7 +45,7 @@ const Header = (props: Props) => {
     (state: RootState) => state.chat
   );
 
-  const { huddleOn, huddleUserId } = useSelector(
+  const { huddleOn, huddleUserId, drawerOpen } = useSelector(
     (state: RootState) => state.misc
   );
 
@@ -107,6 +109,11 @@ const Header = (props: Props) => {
     setSelectedOptions(selected);
   };
 
+  const toogleSidebar = () => {
+    console.log("hello");
+    dispatch(setDrawerOpen(!drawerOpen));
+  };
+
   useEffect(() => {
     if (typeid === undefined) {
       localStorage.setItem("type", "");
@@ -165,6 +172,10 @@ const Header = (props: Props) => {
           </DialogHeader>
         </DialogContent>
       </Dialog>
+      <div className="block sm:hidden">
+        <FaBars onClick={toogleSidebar} />
+      </div>
+
       <div>{chatName}</div>
       {type === "channel" && (
         <div className="flex flex-row gap-2 items-center border px-2 py-1 border-primary rounded-sm">
