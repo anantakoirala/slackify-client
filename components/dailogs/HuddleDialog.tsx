@@ -76,7 +76,7 @@ const HuddleDialog = ({
             backgroundRepeat: "no-repeat",
           }}
         >
-          <div className="flex flex-row w-full h-[75%] gap-1 pt-1 px-2 ">
+          <div className="flex flex-col sm:flex-row w-full h-[75%] gap-1 pt-1 px-2 ">
             <div className="flex-1 h-full bg-red-500 rounded-md">
               <video
                 autoPlay

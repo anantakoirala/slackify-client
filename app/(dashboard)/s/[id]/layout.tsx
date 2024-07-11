@@ -20,6 +20,9 @@ import SocketProvider, {
 import {
   setHuddleOn,
   setHuddleShow,
+  setHuddleSwitchChecked,
+  setHuddleUserId,
+  setHuddleUserName,
   setSenderUserId,
 } from "@/redux/misc/miscSlice";
 import { Headphones, LucideMaximize } from "lucide-react";
@@ -34,9 +37,21 @@ import {
   BiVideoOff,
 } from "react-icons/bi";
 
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+
 import { LuScreenShare, LuScreenShareOff } from "react-icons/lu";
 import { TbHeadphones, TbHeadphonesOff } from "react-icons/tb";
 import Huddle from "@/components/Huddle";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 const config = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -62,6 +77,7 @@ export default function WorkspaceLayout({
   const [userIdLeavingRoom, setUserIdLeavingRoom] = useState("");
 
   const [huddleDialogOpen, setHuddleDialogOpen] = useState(false);
+
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [fullScreenMode, setFullScreenMode] = useState(false);
@@ -69,6 +85,8 @@ export default function WorkspaceLayout({
   const [screenSharing, setScreenSharing] = React.useState(false);
   const [audioEnabled, setAudioEnabled] = React.useState(true);
   const [videoEnabled, setVideoEnabled] = React.useState(true);
+  const [isOpen, setIsOpen] = useState(false);
+
   const pcRefs = React.useRef<Record<string, RTCPeerConnection>>({});
   const [connectedUsers, setConnectedUsers] = React.useState<ConnectedUsers>(
     {}
@@ -78,9 +96,19 @@ export default function WorkspaceLayout({
 
   const authenticatedUser = useContext(AuthContext);
 
+  const isLargeScreen = useMediaQuery("(min-width:640px)");
+
   const changeHuddleDialogState = () => {
-    console.log("hello");
+    console.log("close bhayo");
     setHuddleDialogOpen((prev) => !prev);
+    // in small screen if the modal is closed the video chat ends
+    if (isLargeScreen === false) {
+      dispatch(setHuddleOn(false));
+      dispatch(setHuddleUserId(""));
+      dispatch(setHuddleShow(false));
+      dispatch(setHuddleUserName(""));
+      dispatch(setHuddleSwitchChecked(false));
+    }
   };
 
   const { data, isLoading, isError, error } = useFindWorkSpaceQuery(id);
@@ -136,7 +164,6 @@ export default function WorkspaceLayout({
   };
 
   const toggleVideo = () => {
-    console.log("video_ref", videoref.current);
     const tracks = videoStream?.getVideoTracks();
     if (tracks && tracks.length > 0) {
       tracks[0].enabled = !videoEnabled;
@@ -381,7 +408,6 @@ export default function WorkspaceLayout({
     }
 
     return () => {
-      console.log("clear");
       // Clean up resources (close the peer connections, stop media streams, etc.)
       for (const user in pcRefs.current) {
         if (pcRefs.current[user]) {
@@ -398,6 +424,12 @@ export default function WorkspaceLayout({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [huddleOn, chatId]);
+
+  useEffect(() => {
+    if (isLargeScreen) {
+      setIsOpen(false);
+    }
+  }, [isLargeScreen]);
 
   const initiateCall = useCallback(
     async (user: string) => {
@@ -454,6 +486,7 @@ export default function WorkspaceLayout({
     }
   }, [videoStream, huddleDialogOpen, huddleOn, remoteStream]);
 
+  //event when removing full screen
   useEffect(() => {
     const handleFullscreenChange = () => {
       if (document.fullscreenElement) {
@@ -495,112 +528,50 @@ export default function WorkspaceLayout({
           toggleAudio={toggleAudio}
         />
       )}
-
+      <Drawer direction="left" open={isOpen} onOpenChange={setIsOpen}>
+        <DrawerContent className="h-full w-[80%]">
+          <SideBar
+            showSideBar={showSideBar}
+            isOpen={isOpen}
+            setIsOpen={setIsOpen}
+            isLargeScreen={isLargeScreen}
+          />
+        </DrawerContent>
+      </Drawer>
       <div className="flex flex-row">
-        <div className="w-64 block relative">
+        <div className="w-64 hidden sm:block relative">
           <div className="h-full">
             <SideBar showSideBar={showSideBar} />
           </div>
           {/* webcam section */}
           {huddleOn && !huddleDialogOpen && (
-            <div
-              ref={fullScreenDiv}
-              className={`w-full  bg-card ${
-                huddleOn ? "h-40 items-start" : "hidden items-center"
-              } border border-primary rounded-tl-md rounded-tr-md absolute bottom-0 flex flex-col px-2 `}
-            >
-              <div className="flex flex-row justify-between items-center w-full ">
-                <div className="text-primary text-sm">{huddleUserName}</div>
-                <LucideMaximize
-                  onClick={handleHuddleDialogOpen}
-                  className="text-primary text-sm w-3"
-                />
-              </div>
-              <div
-                className="w-full h-full  mb-1 rounded-sm"
-                style={{
-                  backgroundImage: `url(${pattern.src})`,
-                  backgroundSize: "cover", // Ensures the image covers the entire div
-                  backgroundPosition: "center", // Centers the image
-                  backgroundRepeat: "no-repeat", // Prevents the image from repeating
-                  objectFit: "cover",
-                }}
-              >
-                {/* video here */}
-                <div className="flex flex-row w-full h-[75%] gap-1 pt-1 px-2 ">
-                  <div className="flex-1 h-full bg-red-500 rounded-md">
-                    <video
-                      autoPlay
-                      ref={videoref}
-                      playsInline
-                      className={`w-full h-full object-cover rounded-md ${
-                        !videoEnabled ? "hidden" : ""
-                      }`}
-                    ></video>
-                    {!videoEnabled && (
-                      <div className="w-full h-full bg-red-500 rounded-md"></div>
-                    )}
-                  </div>
-                  <div className="flex-1 h-full bg-lime-600 rounded-md">
-                    {videoEnabled ? (
-                      <video
-                        autoPlay
-                        ref={videoref2}
-                        playsInline
-                        className="w-full h-full object-cover rounded-md"
-                      ></video>
-                    ) : (
-                      <div className="w-full h-full bg-lime-600 rounded-md"></div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-row w-full h-[21%]  mb-1 mt-1 px-2 items-center justify-center">
-                  <div
-                    onClick={toggleVideo}
-                    className={`bg-primary rounded-md ${
-                      fullScreenMode
-                        ? "w-[5rem] h-[5rem]"
-                        : "w-[1.9rem] h-[1.9rem]"
-                    } flex items-center justify-center m-1`}
-                  >
-                    {!videoEnabled ? (
-                      <BiVideoOff size="1.7rem" className="text-red-500" />
-                    ) : (
-                      <BiVideo size="1.8rem" />
-                    )}
-                  </div>
-                  <div
-                    onClick={toggleAudio}
-                    className="bg-primary rounded-md w-[1.9rem] h-[1.9rem] flex items-center justify-center m-1"
-                  >
-                    {!audioEnabled ? (
-                      <BiMicrophoneOff size="4rem" />
-                    ) : (
-                      <BiMicrophone size="4rem" />
-                    )}
-                  </div>
-                  <div
-                    onClick={
-                      screenSharing ? stopScreenSharing : startScreenSharing
-                    }
-                    className="bg-primary rounded-md w-[1.9rem] h-[1.9rem] flex items-center justify-center m-1"
-                  >
-                    {screenSharing ? (
-                      <LuScreenShareOff size="1.6rem" />
-                    ) : (
-                      <LuScreenShare size="1.6rem" />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <Huddle
+              huddleOn={huddleOn}
+              huddleUserName={huddleUserName}
+              handleHuddleDialogOpen={handleHuddleDialogOpen}
+              videoref={videoref}
+              videoref2={videoref2}
+              videoEnabled={videoEnabled}
+              audioEnabled={audioEnabled}
+              screenSharing={screenSharing}
+              toggleVideo={toggleVideo}
+              toggleAudio={toggleAudio}
+              startScreenSharing={startScreenSharing}
+              stopScreenSharing={stopScreenSharing}
+            />
           )}
           {/* webcam section ends */}
         </div>
         <div className="flex-1 flex flex-col min-h-screen">
           <div className="w-full h-16 bg-white">
-            <Header />
+            <Header
+              isOpen={isOpen}
+              setIsOpen={setIsOpen}
+              isLargeScreen={isLargeScreen}
+              handleHuddleDialogOpen={handleHuddleDialogOpen}
+            />
           </div>
+
           {children}
         </div>
       </div>

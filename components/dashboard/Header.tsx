@@ -15,23 +15,34 @@ import {
   setDrawerOpen,
   setHuddleOn,
   setHuddleShow,
+  setHuddleSwitchChecked,
   setHuddleUserId,
   setHuddleUserName,
 } from "@/redux/misc/miscSlice";
 import { FaBars } from "react-icons/fa";
 
-type Props = {};
+type Props = {
+  isOpen: boolean;
+  setIsOpen: React.SetStateAction<any>;
+  isLargeScreen: boolean;
+  handleHuddleDialogOpen: () => void;
+};
 
 interface Option {
   value: string;
   label: string;
 }
 
-const Header = (props: Props) => {
+const Header = ({
+  isOpen,
+  setIsOpen,
+  isLargeScreen,
+  handleHuddleDialogOpen,
+}: Props) => {
   const [type, setType] = useState("");
   const dispatch = useDispatch();
   const [openMemberDialog, setOpenMemberDialog] = useState(false);
-  const [isChecked, setIsChecked] = useState(false);
+
   const [selectedOptions, setSelectedOptions] =
     useState<MultiValue<Option> | null>(null);
 
@@ -45,9 +56,8 @@ const Header = (props: Props) => {
     (state: RootState) => state.chat
   );
 
-  const { huddleOn, huddleUserId, drawerOpen } = useSelector(
-    (state: RootState) => state.misc
-  );
+  const { huddleOn, huddleUserId, drawerOpen, huddleSwitchChecked } =
+    useSelector((state: RootState) => state.misc);
 
   const { membersNotInchannel } = useSelector(
     (state: RootState) => state.channel
@@ -57,7 +67,8 @@ const Header = (props: Props) => {
   const [createNewChat] = useNewChatMutation();
 
   const handleToggleChange = (e: any) => {
-    setIsChecked(e.target.checked);
+    dispatch(setHuddleSwitchChecked(e.target.checked));
+
     dispatch(setHuddleOn(e.target.checked));
     if (type === "user" && huddleUserId === "") {
       dispatch(setHuddleUserId(typeid));
@@ -67,6 +78,10 @@ const Header = (props: Props) => {
       dispatch(setHuddleUserId(""));
       dispatch(setHuddleShow(false));
       dispatch(setHuddleUserName(""));
+    }
+    //open dialog directly in small screen
+    if (isLargeScreen === false) {
+      handleHuddleDialogOpen();
     }
   };
 
@@ -110,8 +125,7 @@ const Header = (props: Props) => {
   };
 
   const toogleSidebar = () => {
-    console.log("hello");
-    dispatch(setDrawerOpen(!drawerOpen));
+    setIsOpen(!isOpen);
   };
 
   useEffect(() => {
@@ -211,21 +225,21 @@ const Header = (props: Props) => {
           <div className="relative">
             <input
               type="checkbox"
-              checked={isChecked}
+              checked={huddleSwitchChecked}
               onChange={handleToggleChange}
               className="sr-only"
             />
             <div
               className={`block h-8 w-14 rounded-full transition ${
-                isChecked ? "bg-red-800" : " bg-green-600"
+                huddleSwitchChecked ? "bg-red-800" : " bg-green-600"
               }`}
             ></div>
             <div
               className={`dot absolute left-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-yellow-500 transition ${
-                isChecked ? "transform translate-x-full" : ""
+                huddleSwitchChecked ? "transform translate-x-full" : ""
               }`}
             >
-              {isChecked ? (
+              {huddleSwitchChecked ? (
                 <span className="active text-center">
                   <Headphones className="w-4 h-4" />
                 </span>

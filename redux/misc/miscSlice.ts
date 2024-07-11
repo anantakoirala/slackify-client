@@ -10,6 +10,7 @@ type InitialState = {
   senderUserId: string;
   showSideBar: boolean;
   drawerOpen: boolean;
+  huddleSwitchChecked: boolean;
 };
 
 const initialState: InitialState = {
@@ -22,6 +23,7 @@ const initialState: InitialState = {
   senderUserId: "",
   showSideBar: true,
   drawerOpen: false,
+  huddleSwitchChecked: false,
 };
 
 export const miscSlice = createSlice({
@@ -29,7 +31,7 @@ export const miscSlice = createSlice({
   initialState,
   reducers: {
     setType: (state, action) => {
-      console.log("payload", action.payload);
+      //console.log("payload", action.payload);
       state.type = action.payload;
     },
     setTid: (state, action: PayloadAction<string>) => {
@@ -56,6 +58,9 @@ export const miscSlice = createSlice({
     setDrawerOpen: (state, action) => {
       state.drawerOpen = action.payload;
     },
+    setHuddleSwitchChecked: (state, action) => {
+      state.huddleSwitchChecked = action.payload;
+    },
   },
 });
 
@@ -69,4 +74,5 @@ export const {
   setSenderUserId,
   setShowSideBar,
   setDrawerOpen,
+  setHuddleSwitchChecked,
 } = miscSlice.actions;

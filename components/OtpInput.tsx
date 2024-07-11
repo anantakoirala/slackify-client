@@ -61,7 +61,7 @@ const OtpInput = ({ length, onChange, defaultValue = "" }: Props) => {
           ref={(el) => {
             if (el) inputsRef.current[index] = el;
           }}
-          className="w-20 h-20 border-2 text-center focus:ring-4 focus-visible:ring-ring m-1 rounded-xl outline-none  bg-card text-muted-foreground "
+          className="w-10 sm:w-20 h-10 sm:h-20 border-2 text-center focus:ring-4 focus-visible:ring-ring m-1 rounded-xl outline-none  bg-card text-muted-foreground "
         />
       ))}
     </div>

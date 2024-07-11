@@ -64,18 +64,22 @@ import { AuthContext } from "@/ContextProvider/AuthProvider";
 
 type Props = {
   showSideBar: boolean;
+  isOpen?: boolean;
+  setIsOpen?: React.SetStateAction<any>;
+  isLargeScreen?: boolean;
 };
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Minimum 2 charaters required" }),
 });
 
-const SideBar = ({ showSideBar }: Props) => {
+const SideBar = ({ showSideBar, isLargeScreen, isOpen, setIsOpen }: Props) => {
   const { id, typeid } = useParams();
   const route = useRouter();
   const dispatch = useDispatch();
   const [openMenu, setOpenMenu] = useState(false);
   const [open, setOpen] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [openMemberDialog, setOpenMemberDialog] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [isClient, setIsClient] = useState(false);
@@ -133,13 +137,16 @@ const SideBar = ({ showSideBar }: Props) => {
     // dispatch(setTid(_id));
     localStorage.setItem("tid", _id);
     localStorage.setItem("type", type);
-    console.log("organizationId", organizationId);
+
     const response = await createNewChat({
       _id,
       type,
       organizationId: organizationId,
     });
-    console.log("response", response);
+    console.log("isLargeScreen", isLargeScreen);
+    if (isLargeScreen === false) {
+      setIsOpen();
+    }
     route.push(`/s/${id}/${_id}`);
   };
 
@@ -189,10 +196,6 @@ const SideBar = ({ showSideBar }: Props) => {
       });
     }
     socket.on("incomming-call", (data) => {
-      console.log("receivedchat incomming call", data.message.chat);
-      console.log("Received data incomming call:", data.message);
-      console.log("sendetId:", data.message.senderId);
-      console.log("auth user id:", authenticatedUser?._id);
       if (data.message.senderId !== authenticatedUser?._id) {
         dispatch(setSenderUserId(data.message.senderId));
       }
@@ -202,17 +205,25 @@ const SideBar = ({ showSideBar }: Props) => {
       socket.off("incomming-call");
     };
   }, [huddleOn, socket, chatId, members, typeid, authenticatedUser, dispatch]);
+
+  //finding online users
+  useEffect(() => {
+    // Emit userJoined event when user joins
+    socket?.emit("userJoined", { organizationId });
+    // Listen for updates to the online user list
+    socket?.on("updateUserList", (users) => {
+      setOnlineUsers(users);
+      //console.log("onlineUsers", users);
+    });
+    return () => {
+      socket?.off("updateUserList");
+    };
+  }, [socket, organizationId]);
   return (
     <div
-      className={`${
-        showSideBar
-          ? `sm:block  mt-20 sm:mt-0 bg-background space-y-6 w-64 ${
-              huddleOn ? "h-[calc(100vh-160px)]" : "h-[calc(100vh-0px)]"
-            } dark:text-slate-100 text-slate-800 fixed left-0 top-0 bottom-0 shadow-md overflow-y-scroll`
-          : `hidden mt-20 sm:mt-0 sm:block bg-background space-y-6 w-64 ${
-              huddleOn ? "h-[calc(100vh-160px)]" : "h-[calc(100vh-0px)]"
-            } dark:text-slate-100 text-slate-800 fixed left-0 top-0 bottom-0 shadow-md border-r-2 border-r-secondary-foreground overflow-y-scroll`
-      }`}
+      className={`sm:block  mt-2 sm:mt-0 bg-background space-y-6 w-full  sm:w-64 ${
+        huddleOn ? "h-[calc(100vh-160px)]" : "h-[calc(100vh-0px)]"
+      } dark:text-slate-100 text-slate-800 fixed left-0 top-0 bottom-0 shadow-md overflow-y-scroll`}
     >
       <div className="h-16 flex flex-col items-center justify-between px-2 ">
         <Dialog open={open} onOpenChange={setOpen} modal>
@@ -352,7 +363,9 @@ const SideBar = ({ showSideBar }: Props) => {
                     {senderUserId === coworker._id && (
                       <Headphones className="w-4 h-4" />
                     )}
-
+                    {onlineUsers.includes(coworker._id) && (
+                      <div className="w-4 h-3 bg-green-500 rounded-full flex items-center justify-center"></div>
+                    )}
                     {/* {targetUserId} */}
                   </div>
                 </div>
