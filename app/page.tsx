@@ -29,7 +29,6 @@ export default function Home() {
 
     checkAuthenticationAndLog();
     if (isAuthenticated) {
-      console.log("hello");
       restApi
         .get("/api/v1/workspace/my-workspaces")
         .then((res) => {

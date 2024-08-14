@@ -2,12 +2,13 @@
 import { restApi } from "@/api";
 import TagInput from "@/components/TagInput";
 import { Button } from "@/components/ui/button";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 type Props = {};
 
 const Page = (props: Props) => {
+  const route = useRouter();
   const { organizationId } = useParams();
   const [email, setEmail] = useState<string[]>([""]);
   const [error, setError] = useState("");
@@ -23,7 +24,10 @@ const Page = (props: Props) => {
     if (organizationId) {
       restApi
         .put(`/api/v1/workspace/${organizationId}`, { data: tags })
-        .then((res) => console.log(res));
+        .then((res) => {
+          console.log(res);
+          route.push(`/chanels/${organizationId}`);
+        });
     }
   };
 
@@ -36,7 +40,12 @@ const Page = (props: Props) => {
 
       <div className="flex flex-col">
         <div className=" w-full sm:w-[50%]">
-          <TagInput users={[]} tags={tags} setTags={setTags} />
+          <TagInput
+            users={[]}
+            tags={tags}
+            setTags={setTags}
+            placeholder={"example@email.com"}
+          />
         </div>
         {error && <span className="text-red-700">{error}</span>}
         <div className="flex flex-row gap-2">
@@ -51,6 +60,7 @@ const Page = (props: Props) => {
             variant={"outline"}
             className="w-20 mt-6 h-12 inline-flex items-center justify-center rounded-md text-sm font-medium  disabled:pointer-events-none disabled:opacity-50  text-muted-foreground  px-4 py-2"
             type="button"
+            onClick={() => route.push(`/chanels/${organizationId}`)}
           >
             Skip
           </Button>

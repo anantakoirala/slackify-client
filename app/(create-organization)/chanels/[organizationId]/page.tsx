@@ -1,6 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useParams, useRouter } from "next/navigation";
 import React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -14,6 +15,8 @@ const formSchema = z.object({
 });
 
 const Page = (props: Props) => {
+  const route = useRouter();
+  const { organizationId } = useParams();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
   });
@@ -34,6 +37,14 @@ const Page = (props: Props) => {
         <button className="w-20 mt-6 h-12 inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2">
           Next
         </button>
+        <Button
+          variant={"outline"}
+          className="w-20 mt-6 h-12 inline-flex items-center justify-center rounded-md text-sm font-medium  disabled:pointer-events-none disabled:opacity-50  text-muted-foreground  px-4 py-2"
+          type="button"
+          onClick={() => route.push(`/chanels/${organizationId}`)}
+        >
+          Skip
+        </Button>
       </form>
     </div>
     // <div className="">ananta</div>

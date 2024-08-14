@@ -26,10 +26,12 @@ const chatApi = api.injectEndpoints({
       },
     }),
     getChatMessages: builder.query({
-      query: ({ chatId, page }) => ({
-        url: `/api/v1/chat/message/${chatId}?page=${page}`,
-        method: "GET",
-      }),
+      query: ({ chatId, page }) => {
+        return {
+          url: `/api/v1/chat/message/${chatId}?page=${page}`,
+          method: "GET",
+        };
+      },
       keepUnusedDataFor: 0,
     }),
   }),

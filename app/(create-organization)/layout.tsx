@@ -15,14 +15,16 @@ export default function OrganizationLayout({
   return (
     <div className="flex flex-row">
       {/* sidebar */}
-      <OrganizationSidebar />
+      <AuthProvider>
+        <OrganizationSidebar />
 
-      <div className="flex-grow bg-primary min-h-screen">
-        {/* header */}
+        <div className="flex-grow bg-primary min-h-screen">
+          {/* header */}
 
-        <main className="p-8  min-h-screen  bg-card/80">{children}</main>
-        {/* main */}
-      </div>
+          <main className="p-8  min-h-screen  bg-card/80">{children}</main>
+          {/* main */}
+        </div>
+      </AuthProvider>
       {/* main body */}
     </div>
   );

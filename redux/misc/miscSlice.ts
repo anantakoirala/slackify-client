@@ -11,6 +11,8 @@ type InitialState = {
   showSideBar: boolean;
   drawerOpen: boolean;
   huddleSwitchChecked: boolean;
+  callAcceptRejectBox: boolean;
+  onCall: boolean;
 };
 
 const initialState: InitialState = {
@@ -24,6 +26,8 @@ const initialState: InitialState = {
   showSideBar: true,
   drawerOpen: false,
   huddleSwitchChecked: false,
+  callAcceptRejectBox: false,
+  onCall: false,
 };
 
 export const miscSlice = createSlice({
@@ -61,6 +65,12 @@ export const miscSlice = createSlice({
     setHuddleSwitchChecked: (state, action) => {
       state.huddleSwitchChecked = action.payload;
     },
+    setCallAcceptRejectBox: (state, action) => {
+      state.callAcceptRejectBox = action.payload;
+    },
+    setOnCall: (state, action) => {
+      state.onCall = action.payload;
+    },
   },
 });
 
@@ -75,4 +85,6 @@ export const {
   setShowSideBar,
   setDrawerOpen,
   setHuddleSwitchChecked,
+  setCallAcceptRejectBox,
+  setOnCall,
 } = miscSlice.actions;

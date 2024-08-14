@@ -23,6 +23,8 @@ type Props = {
   toggleAudio: () => void;
   startScreenSharing: () => void;
   stopScreenSharing: () => void;
+
+  remoteStream: any;
 };
 
 const Huddle = ({
@@ -38,17 +40,25 @@ const Huddle = ({
   toggleAudio,
   startScreenSharing,
   stopScreenSharing,
+
+  remoteStream,
 }: Props) => {
   useEffect(() => {
     if (huddleOn) {
       if (videoref.current && videoref.current.srcObject) {
         videoref.current.srcObject = videoref.current.srcObject;
       }
-      if (videoref2.current && videoref2.current.srcObject) {
-        videoref2.current.srcObject = videoref2.current.srcObject;
-      }
     }
-  }, [huddleOn, videoref, videoref2]);
+    if (remoteStream) {
+      console.log(
+        "remoteStream in huddle",
+        remoteStream.getVideoTracks().length
+      );
+    } else {
+      console.log("remoteStream is null or undefined");
+    }
+  }, [huddleOn, videoref, videoref2, videoEnabled, remoteStream]);
+
   return (
     <>
       <div
@@ -86,12 +96,12 @@ const Huddle = ({
               )}
             </div>
             <div className="flex-1 h-full bg-lime-600 rounded-md">
-              {videoEnabled ? (
+              {remoteStream && remoteStream.getVideoTracks().length > 0 ? (
                 <video
                   autoPlay
                   ref={videoref2}
                   playsInline
-                  className="w-full h-full object-cover rounded-md"
+                  className="w-full h-full object-cover rounded-md second"
                 ></video>
               ) : (
                 <div className="w-full h-full bg-lime-600 rounded-md"></div>

@@ -8,50 +8,41 @@ import React, {
 } from "react";
 import "../../../globals.css";
 import SideBar from "@/components/SideBar";
-import WorkSpaceProvider from "@/ContextProvider/WorkSpaceProvider";
+
 import Header from "@/components/dashboard/Header";
-import { Provider, useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { RootState, store } from "@/redux/store";
 import { useParams, useRouter } from "next/navigation";
-import { useFindWorkSpaceQuery } from "@/redux/workspace/workspaceApi";
+import {
+  useFindAllMyWorkspacesQuery,
+  useLazyFindWorkSpaceQuery,
+} from "@/redux/workspace/workspaceApi";
+import { useSound } from "use-sound";
+
 import SocketProvider, {
   SocketContext,
 } from "@/ContextProvider/SocketProvider";
 import {
+  setCallAcceptRejectBox,
   setHuddleOn,
   setHuddleShow,
   setHuddleSwitchChecked,
   setHuddleUserId,
   setHuddleUserName,
-  setSenderUserId,
+  setOnCall,
 } from "@/redux/misc/miscSlice";
-import { Headphones, LucideMaximize } from "lucide-react";
+
 import HuddleDialog from "@/components/dailogs/HuddleDialog";
-import pattern from "../../../../public/backgroundd.png";
-import Image from "next/image";
+
 import { AuthContext } from "@/ContextProvider/AuthProvider";
-import {
-  BiMicrophone,
-  BiMicrophoneOff,
-  BiVideo,
-  BiVideoOff,
-} from "react-icons/bi";
 
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
+import { Drawer, DrawerContent } from "@/components/ui/drawer";
 
-import { LuScreenShare, LuScreenShareOff } from "react-icons/lu";
-import { TbHeadphones, TbHeadphonesOff } from "react-icons/tb";
 import Huddle from "@/components/Huddle";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import CallAcceptRejectDialog from "@/components/dailogs/CallAcceptRejectDialog";
+import { PeerContext } from "@/ContextProvider/PeerProvider";
+import { MediaConnection } from "peerjs";
 
 const config = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -69,6 +60,7 @@ export default function WorkspaceLayout({
   const videoref = useRef<HTMLVideoElement>(null);
   const videoref2 = useRef<HTMLVideoElement>(null); // Assuming you have a second video reference
   const fullScreenDiv = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   const route = useRouter();
   const dispatch = useDispatch();
@@ -80,26 +72,30 @@ export default function WorkspaceLayout({
 
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const currentCallRef = useRef<MediaConnection | null>(null);
   const [fullScreenMode, setFullScreenMode] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [screenSharing, setScreenSharing] = React.useState(false);
   const [audioEnabled, setAudioEnabled] = React.useState(true);
   const [videoEnabled, setVideoEnabled] = React.useState(true);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [isReceiver, setIsReceiver] = useState<boolean>(false);
+
+  const [playRingtone] = useSound("/sounds/ringtone.mp3");
 
   const pcRefs = React.useRef<Record<string, RTCPeerConnection>>({});
-  const [connectedUsers, setConnectedUsers] = React.useState<ConnectedUsers>(
-    {}
-  );
+  const [connectedUsers, setConnectedUsers] = React.useState([]);
+
+  const [connectedUser, setConnectedUser] = useState<string[]>([]);
 
   const socket = useContext(SocketContext);
+  const { peerInstance: peer, restartPeerConnection } = useContext(PeerContext);
 
   const authenticatedUser = useContext(AuthContext);
 
   const isLargeScreen = useMediaQuery("(min-width:640px)");
 
   const changeHuddleDialogState = () => {
-    console.log("close bhayo");
     setHuddleDialogOpen((prev) => !prev);
     // in small screen if the modal is closed the video chat ends
     if (isLargeScreen === false) {
@@ -111,13 +107,20 @@ export default function WorkspaceLayout({
     }
   };
 
-  const { data, isLoading, isError, error } = useFindWorkSpaceQuery(id);
-  const { name } = useSelector((state: RootState) => state.workspace);
-  const { huddleShow, huddleOn, type, huddleUserName, showSideBar } =
+  // const { data, isLoading, isError, error, refetch } =
+  //   useFindWorkSpaceQuery(id);
+  const [trigger, { data, isLoading, isError, error }] =
+    useLazyFindWorkSpaceQuery();
+  const { data: myWorkspaces, isLoading: myWorkspaceLoading } =
+    useFindAllMyWorkspacesQuery();
+  const { name, _id } = useSelector((state: RootState) => state.workspace);
+  const { huddleShow, huddleOn, type, huddleUserName, showSideBar, onCall } =
     useSelector((state: RootState) => state.misc);
-  const { name: chatName, chatId } = useSelector(
-    (state: RootState) => state.chat
-  );
+  const {
+    name: chatName,
+    chatId,
+    members,
+  } = useSelector((state: RootState) => state.chat);
 
   const enterFullscreen = () => {
     const elem = fullScreenDiv?.current;
@@ -182,285 +185,258 @@ export default function WorkspaceLayout({
     }
   };
 
-  const logActivePeerConnections = () => {
-    console.log("Active Peer Connections:");
-    Object.keys(pcRefs.current).forEach((userId) => {
-      console.log(
-        `User ID: ${userId}, Peer Connection:`,
-        pcRefs.current[userId]
-      );
-    });
-  };
-
-  const setUpPeerConnection = useCallback(
-    async (user: string) => {
-      try {
-        if (pcRefs.current[user]) {
-          console.log(`Peer connection for user ${user} already exists.`);
-          return;
-        }
-        if (screenSharing) {
-          const localstream = await navigator.mediaDevices.getDisplayMedia({
-            video: true,
-          });
-        } else {
-          const localstream = await navigator.mediaDevices.getUserMedia({
-            audio: true,
-            video: true,
-          });
-          setVideoStream(localstream);
-
-          if (videoref.current) {
-            videoref.current.srcObject = localstream; // Display local video in videoref
-          }
-
-          const pc = new RTCPeerConnection(config);
-          pc.onicecandidate = (event) => {
-            console.log("setUpPeerConnection icecandidate", event);
-            if (event.candidate) {
-              socket?.emit("ice-candidate", {
-                roomId: chatId,
-                candidate: event.candidate,
-                senderUserId: user,
-              });
-            }
-          };
-
-          pc.onconnectionstatechange = (e) => {
-            console.log("Connection state:", pc.connectionState);
-          };
-
-          pc.ontrack = (event) => {
-            const stream = event.streams[0];
-            console.log("ontrack", event.streams[0]);
-            if (videoref2.current) {
-              setRemoteStream(stream);
-              videoref2.current.srcObject = stream; // Display remote video in videoref2
-            }
-          };
-          localstream.getTracks().forEach((track) => {
-            pc.addTrack(track, localstream as MediaStream);
-          });
-          if (authenticatedUser) {
-            pcRefs.current[user] = pc;
-            logActivePeerConnections();
-          }
-        }
-      } catch (error) {}
-    },
-    [authenticatedUser, chatId, screenSharing, socket]
-  );
-
   // Function to send an SDP offer to another user
-  const sendOffer = useCallback(
-    (offer: RTCSessionDescriptionInit, targetUserId: string) => {
-      console.log("offer was sent", offer, targetUserId);
-      socket?.emit("offer", { offer, targetUserId });
-    },
-    [socket]
-  );
 
-  // Function to send an SDP answer to another user
+  // const setUpWebRTC = useCallback(async () => {
+  //   try {
+  //     console.log("call started");
+  //     const userId = authenticatedUser?._id;
 
-  const sendAnswer = useCallback(
-    (answer: RTCSessionDescriptionInit, senderUserId: string) => {
-      console.log("answer was sent", answer, senderUserId);
-      socket?.emit("answer", { answer, senderUserId });
-    },
-    [socket]
-  );
+  //     try {
+  //       const localstream = await navigator.mediaDevices.getUserMedia({
+  //         audio: true,
+  //         video: true,
+  //       });
 
-  // Function to handle an incoming SDP offer
+  //       setVideoStream(localstream);
+  //       dispatch(setOnCall(true));
 
-  const handleOffer = useCallback(
-    async (offer: RTCSessionDescriptionInit, senderUserId: string) => {
-      try {
-        await pcRefs.current[senderUserId].setRemoteDescription(offer);
-        const answer = await pcRefs.current[senderUserId].createAnswer();
-        await pcRefs.current[senderUserId].setLocalDescription(answer);
-        sendAnswer(
-          pcRefs.current[senderUserId]
-            .localDescription as RTCSessionDescriptionInit,
-          senderUserId
-        );
-      } catch (error) {
-        console.log("Error handling offer:");
-      }
-    },
-    [sendAnswer]
-  );
+  //       if (videoref.current) {
+  //         videoref.current.srcObject = localstream; // Display local video in videoref
+  //       }
+  //     } catch (error) {
+  //       console.error("Error setting up peer connection:", error);
+  //     }
 
-  async function handleAnswer(
-    answer: RTCSessionDescriptionInit,
-    senderUserId: string
-  ) {
-    try {
-      const pc = pcRefs.current[senderUserId];
-      await pc.setRemoteDescription(answer);
-    } catch (error) {
-      console.error("Error handling answer:", error);
-    }
-  }
+  //     if (!isReceiver) {
+  //       if (typeid) {
+  //         localStorage.setItem("cid", chatId);
+  //       }
+  //     }
 
-  // Function to handle an incoming ICE candidate
-  async function handleIceCandidate(
-    candidate: RTCIceCandidateInit,
-    senderUserId: string
-  ) {
-    candidate = new RTCIceCandidate(candidate);
-    pcRefs.current[senderUserId]?.addIceCandidate(candidate).catch((error) => {
-      console.log("Error adding ICE candidate:", error);
-    });
-    console.log("Received ICE candidate:", candidate, senderUserId);
-  }
+  //     const newchatId = localStorage.getItem("cid");
 
-  const setUpWebRTC = useCallback(async () => {
-    try {
-      const userId = authenticatedUser?._id;
+  //     // Emit the "join-room" event when the user starts the call
+  //     socket?.emit("join-room", {
+  //       roomId: localStorage.getItem("cid"),
+  //       userId,
+  //       peerId: peer?.id,
+  //     });
 
-      await setUpPeerConnection(userId as string);
+  //     if (!onCall) {
+  //       console.log("emit incomming call");
+  //       socket?.emit("incomming-call", {
+  //         chatId: newchatId,
+  //       });
+  //     }
 
-      // Emit the "join-room" event when the user starts the call
-      socket?.emit("join-room", {
-        roomId: chatId,
-        userId,
-        targetUserId: typeid,
-      });
-
-      // Listen for the "join-room" event to trigger a call when another user joins
-      socket?.on("join-room", ({ roomId, otherUserId, targetUserId }) => {
-        console.log(`User ${otherUserId} joined room ${roomId}`);
-        setConnectedUsers({ [otherUserId]: true });
-      });
-
-      // Event listener for receiving SDP offers from other users
-      socket?.on("offer", ({ offer, senderUserId }) => {
-        console.log("offer", offer);
-        handleOffer(offer, senderUserId);
-      });
-
-      // Event listener for receiving SDP answers from other users
-      socket?.on("answer", ({ answer, senderUserId }) => {
-        handleAnswer(answer, senderUserId);
-      });
-
-      // Event listener for receiving ICE candidates from other users
-      socket?.on("ice-candidate", (candidate, senderUserId) => {
-        handleIceCandidate(candidate, senderUserId);
-      });
-
-      // Listen for the "room-leave" event to remove the particular video
-      socket?.on("room-leave", async (data) => {
-        console.log("data", data);
-        console.log("leftUserId-data", data.leftUserId);
-        setUserIdLeavingRoom(data.leftUserId);
-      });
-    } catch (error) {
-      console.log(error);
-    }
-  }, [
-    authenticatedUser,
-    chatId,
-    setUpPeerConnection,
-    socket,
-    handleOffer,
-    typeid,
-  ]);
+  //     // Listen for the "room-leave" event to remove the particular video
+  //   } catch (error) {
+  //     console.log(error);
+  //   }
+  // }, [
+  //   authenticatedUser,
+  //   chatId,
+  //   dispatch,
+  //   socket,
+  //   peer,
+  //   typeid,
+  //   isReceiver,
+  //   onCall,
+  // ]);
 
   useEffect(() => {
-    async function stopStream() {
-      const userId = authenticatedUser?._id;
-      if (videoStream) {
-        socket?.emit("room-leave", {
-          roomId: chatId,
-          userId: authenticatedUser?._id,
+    if (videoStream) {
+      peer?.on("call", (call) => {
+        call.answer(videoStream);
+        call.on("stream", (remoteVideoStream) => {
+          setRemoteStream(remoteVideoStream);
         });
-        videoStream?.getTracks().forEach((track) => track.stop());
-        console.log("vidoestream stream", videoStream);
-        // Clear video element sources
-        if (videoref.current) {
-          videoref.current.srcObject = null;
-        }
-        if (videoref2.current) {
-          videoref2.current.srcObject = null;
-        }
+      });
+    }
 
-        console.log("pcrefs", pcRefs);
-        if (userId) {
-          console.log("userId", userId);
+    socket?.on("join-room", ({ roomId, newUserId, peerId }) => {
+      console.log(`User ${newUserId} joined room ${roomId}`);
 
-          console.log("userIdLeavingRoom", userId);
-          if (pcRefs.current[userId]) {
-            pcRefs.current[userId].close();
-          }
-          logActivePeerConnections();
+      //make call to another user
 
-          console.log("pcrefs", pcRefs.current[userId]);
+      if (videoStream) {
+        const call = peer?.call(peerId, videoStream);
+        if (call) {
+          call.on("stream", (remoteVideoStream) => {
+            console.log("videref2 answer", videoref);
+            setRemoteStream(remoteVideoStream);
+          });
         }
       }
-    }
-    if (huddleOn) {
-      const userId = authenticatedUser?._id;
+    });
+  }, [videoStream, socket, peer, dispatch]);
 
-      setUpWebRTC();
-    } else {
-      stopStream();
-    }
+  useEffect(() => {
+    const initiateCall = async () => {
+      if (huddleOn) {
+        if (!onCall) {
+          try {
+            console.log("call started");
+            const userId = authenticatedUser?._id;
+
+            try {
+              const localstream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: true,
+              });
+
+              setVideoStream(localstream);
+              dispatch(setOnCall(true));
+
+              if (videoref.current) {
+                videoref.current.srcObject = localstream; // Display local video in videoref
+              }
+            } catch (error) {
+              console.error("Error setting up peer connection:", error);
+            }
+
+            if (!isReceiver) {
+              if (typeid) {
+                localStorage.setItem("cid", chatId);
+              }
+            }
+
+            const newchatId = localStorage.getItem("cid");
+
+            // Emit the "join-room" event when the user starts the call
+            socket?.emit("join-room", {
+              roomId: localStorage.getItem("cid"),
+              userId,
+              peerId: peer?.id,
+            });
+
+            if (!onCall) {
+              console.log("emit incomming call");
+              socket?.emit("incomming-call", {
+                chatId: newchatId,
+              });
+            }
+
+            const handleIncomingCall = (data: any) => {
+              const userId = authenticatedUser?._id;
+
+              if (userId !== data.message.sender._id && !onCall) {
+                dispatch(setCallAcceptRejectBox(true));
+
+                localStorage.setItem("cid", data.message.chat);
+                dispatch(setHuddleUserId(data.message.sender._id));
+                setIsReceiver(true);
+              }
+            };
+            if (!onCall) {
+              socket?.on("incomming-call", handleIncomingCall);
+            }
+
+            // Listen for the "room-leave" event to remove the particular video
+          } catch (error) {
+            console.log(error);
+          }
+        }
+      } else {
+        setConnectedUser([]);
+        setIsReceiver(false);
+        if (videoStream) {
+          videoStream.getTracks().forEach((track) => track.stop());
+          setVideoStream(null);
+        }
+
+        // socket?.emit("room-leave", {
+        //   roomId: chatId,
+        //   userId: authenticatedUser?._id,
+        // });
+        if (onCall) {
+          socket?.emit("end-call", {
+            roomId: localStorage.getItem("cid"),
+          });
+        }
+        dispatch(setOnCall(false));
+        restartPeerConnection();
+
+        if (remoteStream) {
+          remoteStream.getTracks().forEach((track) => track.stop());
+          setRemoteStream(null);
+        }
+      }
+    };
+
+    initiateCall();
 
     return () => {
-      // Clean up resources (close the peer connections, stop media streams, etc.)
-      for (const user in pcRefs.current) {
-        if (pcRefs.current[user]) {
-          // eslint-disable-next-line react-hooks/exhaustive-deps
-          pcRefs.current[user].close();
-        }
-      }
       socket?.off("join-room");
-      socket?.off("offer");
-      socket?.off("answer");
-      socket?.off("ice-candidate");
-      socket?.off("room-leave");
       socket?.off("incomming-call");
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [huddleOn, chatId]);
+  }, [huddleOn, onCall]);
+
+  //for call tone
+  // useEffect(() => {
+  //   console.log("hello");
+  //   if (!socket) {
+  //     console.log("Socket is not initialized");
+  //     return;
+  //   }
+
+  //   const handleIncomingCall = (data: any) => {
+  //     const userId = authenticatedUser?._id;
+
+  //     if (userId !== data.message.sender._id && !onCall) {
+  //       dispatch(setCallAcceptRejectBox(true));
+
+  //       localStorage.setItem("cid", data.message.chat);
+  //       dispatch(setHuddleUserId(data.message.sender._id));
+  //       setIsReceiver(true);
+  //     }
+  //   };
+  //   if (!onCall) {
+  //     socket.on("incomming-call", handleIncomingCall);
+  //   }
+
+  //   // Cleanup
+  //   return () => {
+  //     socket.off("incomming-call", handleIncomingCall);
+  //   };
+  // }, [
+  //   socket,
+  //   chatId,
+  //   typeid,
+  //   dispatch,
+  //   members,
+  //   connectedUsers,
+  //   huddleOn,
+  //   authenticatedUser,
+  //   onCall,
+  //   _id,
+  // ]);
+
+  useEffect(() => {
+    socket?.on("end-call", () => {
+      dispatch(setCallAcceptRejectBox(false));
+
+      localStorage.removeItem("cid");
+
+      setRemoteStream(null);
+    });
+
+    socket?.on("connection-lost", () => {
+      dispatch(setCallAcceptRejectBox(false));
+    });
+
+    return () => {
+      socket?.off("end-call");
+    };
+  }, [socket, dispatch]);
 
   useEffect(() => {
     if (isLargeScreen) {
       setIsOpen(false);
     }
   }, [isLargeScreen]);
-
-  const initiateCall = useCallback(
-    async (user: string) => {
-      try {
-        console.log("pcrefs", pcRefs);
-        console.log("initiate call user", user);
-        const offer = await pcRefs.current[user]?.createOffer({
-          offerToReceiveVideo: !screenSharing, // Only offer video if not screen sharing
-        });
-        console.log("offfer", offer);
-        await pcRefs.current[user]?.setLocalDescription(offer);
-        const localDescription = pcRefs.current[user]?.localDescription;
-        sendOffer(localDescription as RTCSessionDescriptionInit, user);
-      } catch (error) {
-        console.log("Error creating and sending offer:", error);
-      }
-    },
-    [screenSharing, sendOffer]
-  );
-
-  useEffect(() => {
-    async function setupPeerConnections() {
-      for (const user in connectedUsers) {
-        await setUpPeerConnection(user);
-        await initiateCall(user);
-      }
-    }
-    if (connectedUsers) {
-      setupPeerConnections();
-    }
-  }, [connectedUsers, initiateCall, setUpPeerConnection]);
 
   useEffect(() => {
     if (isError) {
@@ -482,6 +458,7 @@ export default function WorkspaceLayout({
     }
 
     if (remoteStream && videoref2.current) {
+      console.log("hello");
       videoref2.current.srcObject = remoteStream;
     }
   }, [videoStream, huddleDialogOpen, huddleOn, remoteStream]);
@@ -504,7 +481,11 @@ export default function WorkspaceLayout({
     };
   }, []);
 
-  if (isLoading) {
+  useEffect(() => {
+    trigger(id);
+  }, [id, trigger]);
+
+  if (isLoading && myWorkspaceLoading) {
     return <>Loading...</>;
   }
 
@@ -528,6 +509,8 @@ export default function WorkspaceLayout({
           toggleAudio={toggleAudio}
         />
       )}
+      <CallAcceptRejectDialog />
+
       <Drawer direction="left" open={isOpen} onOpenChange={setIsOpen}>
         <DrawerContent className="h-full w-[80%]">
           <SideBar
@@ -558,6 +541,7 @@ export default function WorkspaceLayout({
               toggleAudio={toggleAudio}
               startScreenSharing={startScreenSharing}
               stopScreenSharing={stopScreenSharing}
+              remoteStream={remoteStream}
             />
           )}
           {/* webcam section ends */}

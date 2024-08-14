@@ -12,9 +12,15 @@ type Props = {
   users: string[];
   tags: string[];
   setTags: React.Dispatch<SetStateAction<string[]>>;
+  placeholder?: string;
 };
 
-const TagInput: React.FC<Props> = ({ users, tags, setTags }: Props) => {
+const TagInput: React.FC<Props> = ({
+  users,
+  tags,
+  setTags,
+  placeholder,
+}: Props) => {
   const [inputValue, setInputValue] = useState<string>("");
   const inputRef = useRef<HTMLInputElement>(null);
   const [filteredUsers, setFilteredUsers] = useState<string[]>([]);
@@ -42,7 +48,7 @@ const TagInput: React.FC<Props> = ({ users, tags, setTags }: Props) => {
   };
 
   const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     return emailRegex.test(email);
   };
 
@@ -98,6 +104,7 @@ const TagInput: React.FC<Props> = ({ users, tags, setTags }: Props) => {
             className=" w-[35%] h-10 sm:w-[35%] px-3 py-2  rounded-md outline-none  bg-background text-muted-foreground placeholder:text-sm"
             value={inputValue}
             onChange={handleInputChange}
+            placeholder={placeholder}
           />
         </div>
         {filteredUsers.length > 0 && (

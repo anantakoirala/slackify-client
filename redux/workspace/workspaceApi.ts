@@ -1,14 +1,16 @@
 import { api } from "../api/api";
-import { setWorkspace } from "./workspaceSlice";
+import { setMyWorkspaces, setWorkspace } from "./workspaceSlice";
 
 export const workspaceApi = api.injectEndpoints({
   endpoints: (builder) => ({
     findWorkSpace: builder.query({
-      query: (id) => ({
-        url: `/api/v1/workspace/check-my-workspace/${id}`,
-        method: "GET",
-        credentials: "include" as const,
-      }),
+      query: (id) => {
+        return {
+          url: `/api/v1/workspace/check-my-workspace/${id}`,
+          method: "GET",
+          credentials: "include" as const,
+        };
+      },
 
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
         try {
@@ -18,6 +20,21 @@ export const workspaceApi = api.injectEndpoints({
         } catch (error) {}
       },
       providesTags: ["workspace"],
+    }),
+    findAllMyWorkspaces: builder.query<any, void>({
+      query: () => ({
+        url: `/api/v1/workspace/my-workspaces`,
+        method: "GET",
+        credentials: "include" as const,
+      }),
+      async onQueryStarted(arg, { queryFulfilled, dispatch }) {
+        try {
+          const result = await queryFulfilled;
+          //console.log("myWorkspaces", result.data.myWorkspaces);
+          //console.log("result", result);
+          dispatch(setMyWorkspaces(result.data.myWorkspaces));
+        } catch (error) {}
+      },
     }),
     sendInvitation: builder.mutation({
       query: ({ id, data }) => ({
@@ -31,6 +48,8 @@ export const workspaceApi = api.injectEndpoints({
 
 export const {
   useFindWorkSpaceQuery,
+
   useLazyFindWorkSpaceQuery,
   useSendInvitationMutation,
+  useFindAllMyWorkspacesQuery,
 } = workspaceApi;

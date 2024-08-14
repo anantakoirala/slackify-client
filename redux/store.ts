@@ -6,6 +6,7 @@ import { workspaceSlice } from "./workspace/workspaceSlice";
 import { miscSlice } from "./misc/miscSlice";
 import { chatSlice } from "./chat/chatSlice";
 import { channelSlice } from "./channel/channelSlice";
+import { videoChatSlice } from "./videoChat/VideoChatSlice";
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     [miscSlice.name]: miscSlice.reducer,
     [chatSlice.name]: chatSlice.reducer,
     [channelSlice.name]: channelSlice.reducer,
+    [videoChatSlice.name]: videoChatSlice.reducer,
   },
   devTools: process.env.NODE_ENV !== "production",
   middleware: (getDefaultMiddleware) =>

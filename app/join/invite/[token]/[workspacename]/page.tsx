@@ -31,6 +31,7 @@ import Image from "next/image";
 
 import logo from "../../../../../public/logo.svg";
 import { LT1 } from "@/constants";
+import toast from "react-hot-toast";
 
 type Props = {};
 const formSchema = z.object({
@@ -59,9 +60,14 @@ const Page = (props: Props) => {
         { withCredentials: true }
       )
       .then((res) => {
-        //route.push("/verify");
+        console.log("res", res);
+
+        toast.success("Confirmation link has been sent to your email");
       })
-      .catch((error) => console.log("error", error));
+      .catch((error) => {
+        console.log("error", error.response.data.message);
+        toast.error(error.response.data.message);
+      });
     console.log(data);
   };
 
@@ -144,7 +150,7 @@ const Page = (props: Props) => {
                         Submit
                       </Button>
                     </form>
-                    <span>or</span>
+                    {/* <span>or</span>
                     <Button
                       onClick={() => {
                         window.open(
@@ -157,7 +163,7 @@ const Page = (props: Props) => {
                     >
                       <FaGoogle />
                       Login with Google
-                    </Button>
+                    </Button> */}
                   </Form>
                 </CardContent>
                 <CardFooter className="flex justify-between"></CardFooter>

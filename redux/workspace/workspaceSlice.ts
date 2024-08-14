@@ -6,6 +6,7 @@ type InitialStateType = {
   coWorkers: { _id: string; username: string }[];
   channels: { _id: string; name: string }[];
   type: string;
+  myWorkspaces: { _id: string; name: string; coWorkers: string[] }[];
 };
 
 const initialState: InitialStateType = {
@@ -14,6 +15,7 @@ const initialState: InitialStateType = {
   coWorkers: [],
   channels: [],
   type: "",
+  myWorkspaces: [],
 };
 
 export const workspaceSlice = createSlice({
@@ -23,12 +25,17 @@ export const workspaceSlice = createSlice({
     setWorkspace: (state, action) => {
       const workspace = action.payload.data.workspace;
       state.name = workspace.name;
+
       state.channels = workspace.channels;
       state.coWorkers = workspace.coWorkers;
       state._id = workspace._id;
       // console.log("action", action.payload.data.workspace);
     },
+    setMyWorkspaces: (state, action) => {
+      const myWorkspaces = action.payload;
+      state.myWorkspaces = myWorkspaces;
+    },
   },
 });
 
-export const { setWorkspace } = workspaceSlice.actions;
+export const { setWorkspace, setMyWorkspaces } = workspaceSlice.actions;

@@ -42,6 +42,21 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -55,8 +70,16 @@ import { useCreateChannelMutation } from "@/redux/api/channel/channelApi";
 import toast from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
-import { useSendInvitationMutation } from "@/redux/workspace/workspaceApi";
-import { setSenderUserId, setTid, setType } from "@/redux/misc/miscSlice";
+import {
+  useFindAllMyWorkspacesQuery,
+  useSendInvitationMutation,
+} from "@/redux/workspace/workspaceApi";
+import {
+  setCallAcceptRejectBox,
+  setSenderUserId,
+  setTid,
+  setType,
+} from "@/redux/misc/miscSlice";
 import { useNewChatMutation } from "@/redux/chat/chatApi";
 import { cn } from "@/lib/utils";
 import { SocketContext } from "@/ContextProvider/SocketProvider";
@@ -110,6 +133,7 @@ const SideBar = ({ showSideBar, isLargeScreen, isOpen, setIsOpen }: Props) => {
     channels,
     coWorkers,
     _id: organizationId,
+    myWorkspaces,
   } = useSelector((state: RootState) => state.workspace);
 
   const { chatId, members } = useSelector((state: RootState) => state.chat);
@@ -132,18 +156,22 @@ const SideBar = ({ showSideBar, isLargeScreen, isOpen, setIsOpen }: Props) => {
     sendInvitation({ id: id, data: tags });
   };
 
+  const logOut = async () => {
+    restApi
+      .get("/api/v1/auth/logout")
+      .then((res) => {
+        console.log("res", res);
+        route.push("/");
+      })
+      .catch((error) => console.log(error));
+  };
+
   const openUserChatScreen = async (_id: string, type: string) => {
     dispatch(setType(type));
     // dispatch(setTid(_id));
     localStorage.setItem("tid", _id);
     localStorage.setItem("type", type);
 
-    const response = await createNewChat({
-      _id,
-      type,
-      organizationId: organizationId,
-    });
-    console.log("isLargeScreen", isLargeScreen);
     if (isLargeScreen === false) {
       setIsOpen();
     }
@@ -153,6 +181,10 @@ const SideBar = ({ showSideBar, isLargeScreen, isOpen, setIsOpen }: Props) => {
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  const gotToAnotherWorkspace = async (workspace_id: string) => {
+    route.push(`/s/${workspace_id}`);
+  };
 
   useEffect(() => {
     if (isSuccess) {
@@ -198,6 +230,7 @@ const SideBar = ({ showSideBar, isLargeScreen, isOpen, setIsOpen }: Props) => {
     socket.on("incomming-call", (data) => {
       if (data.message.senderId !== authenticatedUser?._id) {
         dispatch(setSenderUserId(data.message.senderId));
+        dispatch(setCallAcceptRejectBox(true));
       }
     });
 
@@ -213,12 +246,12 @@ const SideBar = ({ showSideBar, isLargeScreen, isOpen, setIsOpen }: Props) => {
     // Listen for updates to the online user list
     socket?.on("updateUserList", (users) => {
       setOnlineUsers(users);
-      //console.log("onlineUsers", users);
     });
     return () => {
       socket?.off("updateUserList");
     };
   }, [socket, organizationId]);
+
   return (
     <div
       className={`sm:block  mt-2 sm:mt-0 bg-background space-y-6 w-full  sm:w-64 ${
@@ -230,7 +263,7 @@ const SideBar = ({ showSideBar, isLargeScreen, isOpen, setIsOpen }: Props) => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="mb-2 text-primary">
-                Are you absolutely sure?
+                Create Channel
               </DialogTitle>
               <Form {...form}>
                 <form
@@ -246,6 +279,7 @@ const SideBar = ({ showSideBar, isLargeScreen, isOpen, setIsOpen }: Props) => {
                           <Input
                             placeholder="project statusThis could be anything: a project, campaign, event, or the deal you're trying to close."
                             {...field}
+                            className="text-muted-foreground"
                           />
                         </FormControl>
                         <FormMessage />
@@ -288,11 +322,42 @@ const SideBar = ({ showSideBar, isLargeScreen, isOpen, setIsOpen }: Props) => {
             </DialogHeader>
           </DialogContent>
         </Dialog>
-        <Link href={"/"} className="h-10 mb-5">
-          <h3 className="font-bold text-4xl text-slate-800 dark:text-slate-50 px-3 text-foreground pt-[6px]">
-            Ecommerce
-          </h3>
-        </Link>
+        <div className="h-10 mb-5">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild className="w-full ">
+              <div className="w-[16.7rem] sm:w-[14.5rem]">
+                <Button
+                  variant="outline"
+                  className=" mt-2 border-none flex flex-row items-start w-full justify-between"
+                >
+                  <span className="text-primary font-bold">{name}</span>
+                  <ChevronDown className="w-5 h-5 rounded-sm bg-card text-primary" />
+                </Button>
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+              <DropdownMenuLabel>My Workspace</DropdownMenuLabel>
+              <DropdownMenuGroup>
+                <div className="h-40 overflow-y-auto">
+                  {myWorkspaces &&
+                    myWorkspaces.map((data, index) => (
+                      <DropdownMenuItem
+                        key={index}
+                        onClick={() => gotToAnotherWorkspace(data._id)}
+                      >
+                        {data.name}
+                      </DropdownMenuItem>
+                    ))}
+                </div>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={logOut}>
+                Log out
+                {/* <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut> */}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
         <Separator className="bg-border h-[1px]" />
       </div>
       <div>
@@ -358,7 +423,7 @@ const SideBar = ({ showSideBar, isLargeScreen, isOpen, setIsOpen }: Props) => {
                   )}
                 >
                   #
-                  <div className="flex flex-1 flex-row items-center gap-10">
+                  <div className="flex flex-1 flex-row items-center gap-1">
                     <div className="  w-full">{coworker.username}</div>
                     {senderUserId === coworker._id && (
                       <Headphones className="w-4 h-4" />

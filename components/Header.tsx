@@ -25,7 +25,7 @@ const Header = ({ isAuthenticated }: Props) => {
               className="w-12 h-12"
             />
           </div>
-          <ul className=" hidden lg:flex gap-6">
+          {/* <ul className=" hidden lg:flex gap-6">
             <li className="flex items-center">
               <a className="flex items-center gap-1" href="#">
                 Features<i className="fa-solid fa-angle-down text-[0.6rem]"></i>
@@ -53,25 +53,25 @@ const Header = ({ isAuthenticated }: Props) => {
                 Pricing
               </a>
             </li>
-          </ul>
+          </ul> */}
         </div>
 
         {/* <!-- navbar right section   --> */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2 sm:gap-6">
           <div className="">
             <a href="">
               <i className="fa-solid fa-magnifying-glass text-lg"></i>
             </a>
           </div>
-          <div className="">
+          {/* <div className="">
             <a href="" className="flex items-center lg:hidden">
               <FaBars />
             </a>
-          </div>
+          </div> */}
           {!isAuthenticated && (
             <>
               <Link
-                className="hidden lg:inline-block hover:underline"
+                className=" lg:inline-block hover:underline"
                 href={"/login"}
               >
                 Sign in
@@ -81,7 +81,7 @@ const Header = ({ isAuthenticated }: Props) => {
           </button> */}
               <Link
                 href={"/register"}
-                className="hidden min-[1150px]:inline-block outline outline-1 outline-white hover:outline-primary  transition-all bg-white text-background font-semibold py-[0.8rem] px-4 rounded-sm"
+                className=" min-[1150px]:inline-block outline outline-1 outline-white hover:outline-primary  transition-all bg-white text-background text-[0.8rem] font-semibold py-[0.5rem] sm:py-[0.8rem] px-2 sm:px-4 rounded-sm "
               >
                 GET STARTED
               </Link>

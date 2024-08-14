@@ -14,6 +14,7 @@ import { useGetChannelUserMutation } from "@/redux/channel/channelApi";
 import { setType } from "@/redux/misc/miscSlice";
 import { AuthContext } from "@/ContextProvider/AuthProvider";
 import InfiniteScroll from "react-infinite-scroll-component";
+import { skipToken } from "@reduxjs/toolkit/query";
 
 type Props = {};
 
@@ -38,10 +39,9 @@ const Page = (props: Props) => {
   const { huddleOn } = useSelector((state: RootState) => state.misc);
   const socket = useContext(SocketContext);
 
-  const { data: newMessages, isFetching } = useGetChatMessagesQuery({
-    chatId,
-    page,
-  });
+  const { data: newMessages, isFetching } = useGetChatMessagesQuery(
+    chatId ? { chatId, page } : skipToken
+  );
 
   const [createNewChat] = useNewChatMutation();
 
@@ -57,6 +57,7 @@ const Page = (props: Props) => {
         (member: { _id: string; username: string }) => member._id
       ),
       message,
+      organizationId: _id,
     });
     //setMessages((prevMessages) => [...prevMessages, message]);
     setMessage("");
@@ -87,7 +88,6 @@ const Page = (props: Props) => {
       console.log("receivedchat", data.message.chat);
       console.log("Received data:", data.message);
       if (data.message.chat === chatId) {
-        console.log("same chat id");
         setMessages((prevMessages) => [...prevMessages, data.message]);
       }
     });
@@ -101,24 +101,27 @@ const Page = (props: Props) => {
   useEffect(() => {
     const type = localStorage.getItem("type");
 
-    const fetchChat = async () => {
-      const response = await createNewChat({
-        _id: typeid,
-        type,
-        organizationId: _id,
-      });
+    if (_id) {
+      const fetchChat = async () => {
+        const response = await createNewChat({
+          _id: typeid,
+          type,
+          organizationId: _id,
+        });
 
-      if (response.error) {
-        route.push(`/s/${_id}`);
-      } else {
-        if (response.data.chat.isGroup) {
-          dispatch(setType("channel"));
+        if (response.error) {
+          console.log("error", response.error);
+          // route.push(`/s/${_id}`);
         } else {
-          dispatch(setType("user"));
+          if (response.data.chat.isGroup) {
+            dispatch(setType("channel"));
+          } else {
+            dispatch(setType("user"));
+          }
         }
-      }
-    };
-    fetchChat();
+      };
+      fetchChat();
+    }
   }, [typeid, id, _id, createNewChat, route, dispatch]);
 
   // find users that are not in channel but in workspace
@@ -173,10 +176,6 @@ const Page = (props: Props) => {
         setPage((prevPage) => prevPage + 1);
         setIsFetchingNewMessages(true);
         if (scrollContainerRef.current) {
-          console.log("totalPages", newMessages.totalPages);
-          console.log("page", page);
-
-          console.log("scrolltop", scrollContainerRef.current.scrollTop);
           setTimeout(() => {
             scrollContainerRef?.current?.scrollTo({
               top: scrollContainerRef.current.scrollTop + 100, // Adjust this value as needed
@@ -188,6 +187,11 @@ const Page = (props: Props) => {
       }
     }
   };
+
+  useEffect(() => {
+    // Reset messages when chatId changes
+    setMessages([]);
+  }, [chatId]);
 
   return (
     <>
