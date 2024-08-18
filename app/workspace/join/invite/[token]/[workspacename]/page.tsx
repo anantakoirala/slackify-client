@@ -29,7 +29,8 @@ import { checkAuthentication } from "@/lib/utils";
 import { restApi } from "@/api";
 import Image from "next/image";
 
-import logo from "../../../../../public/logo.svg";
+// import logo from "../../../../../public/logo.svg";
+import logo from "../../../../../../public/logo.svg";
 import { LT1 } from "@/constants";
 import toast from "react-hot-toast";
 
