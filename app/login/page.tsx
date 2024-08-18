@@ -47,7 +47,7 @@ const Page = (props: Props) => {
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     axios
       .post(
-        "http://localhost:7000/api/v1/auth/login",
+        `${process.env.NEXT_PUBLIC_API}/api/v1/auth/login`,
         { email: data.email },
         { withCredentials: true }
       )
