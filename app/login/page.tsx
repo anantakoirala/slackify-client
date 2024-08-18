@@ -50,7 +50,12 @@ const Page = (props: Props) => {
       .post(
         `${process.env.NEXT_PUBLIC_API}/api/v1/auth/login`,
         { email: data.email },
-        { withCredentials: true }
+        {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "application/json", // Specify the content type
+          },
+        }
       )
       .then((res) => {
         //console.log("res", res);
