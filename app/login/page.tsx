@@ -26,6 +26,7 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import { checkAuthentication } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 type Props = {};
 const formSchema = z.object({
@@ -52,10 +53,13 @@ const Page = (props: Props) => {
         { withCredentials: true }
       )
       .then((res) => {
-        console.log("res", res);
+        //console.log("res", res);
         route.push("/verify");
       })
-      .catch((error) => console.log("error", error));
+      .catch((error) => {
+        //console.log("error", error);
+        toast.error("user not found");
+      });
     console.log(data);
   };
   useEffect(() => {
