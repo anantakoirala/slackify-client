@@ -79,10 +79,6 @@ const CallAcceptRejectDialog = (props: Props) => {
     };
   }, [callAcceptRejectBox]);
 
-  const handleResume = () => {
-    localStorage.setItem("gesture", "gesture");
-    console.log("Simulated user gesture");
-  };
   return (
     <AlertDialog
       open={callAcceptRejectBox}

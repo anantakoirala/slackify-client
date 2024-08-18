@@ -212,33 +212,6 @@ const SideBar = ({ showSideBar, isLargeScreen, isOpen, setIsOpen }: Props) => {
     }
   }, [isSuccess, error, sendInvitationSuccess, sendInvitationError]);
 
-  useEffect(() => {
-    if (!socket) {
-      console.log("Socket is not initialized");
-      return;
-    }
-    if (huddleOn) {
-      socket.emit("incomming-call", {
-        chatId,
-        members: members.map(
-          (member: { _id: string; username: string }) => member._id
-        ),
-        targetId: typeid,
-        senderId: authenticatedUser?._id,
-      });
-    }
-    socket.on("incomming-call", (data) => {
-      if (data.message.senderId !== authenticatedUser?._id) {
-        dispatch(setSenderUserId(data.message.senderId));
-        dispatch(setCallAcceptRejectBox(true));
-      }
-    });
-
-    return () => {
-      socket.off("incomming-call");
-    };
-  }, [huddleOn, socket, chatId, members, typeid, authenticatedUser, dispatch]);
-
   //finding online users
   useEffect(() => {
     // Emit userJoined event when user joins

@@ -43,6 +43,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import CallAcceptRejectDialog from "@/components/dailogs/CallAcceptRejectDialog";
 import { PeerContext } from "@/ContextProvider/PeerProvider";
 import { MediaConnection } from "peerjs";
+import toast from "react-hot-toast";
 
 const config = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -185,66 +186,6 @@ export default function WorkspaceLayout({
     }
   };
 
-  // Function to send an SDP offer to another user
-
-  // const setUpWebRTC = useCallback(async () => {
-  //   try {
-  //     console.log("call started");
-  //     const userId = authenticatedUser?._id;
-
-  //     try {
-  //       const localstream = await navigator.mediaDevices.getUserMedia({
-  //         audio: true,
-  //         video: true,
-  //       });
-
-  //       setVideoStream(localstream);
-  //       dispatch(setOnCall(true));
-
-  //       if (videoref.current) {
-  //         videoref.current.srcObject = localstream; // Display local video in videoref
-  //       }
-  //     } catch (error) {
-  //       console.error("Error setting up peer connection:", error);
-  //     }
-
-  //     if (!isReceiver) {
-  //       if (typeid) {
-  //         localStorage.setItem("cid", chatId);
-  //       }
-  //     }
-
-  //     const newchatId = localStorage.getItem("cid");
-
-  //     // Emit the "join-room" event when the user starts the call
-  //     socket?.emit("join-room", {
-  //       roomId: localStorage.getItem("cid"),
-  //       userId,
-  //       peerId: peer?.id,
-  //     });
-
-  //     if (!onCall) {
-  //       console.log("emit incomming call");
-  //       socket?.emit("incomming-call", {
-  //         chatId: newchatId,
-  //       });
-  //     }
-
-  //     // Listen for the "room-leave" event to remove the particular video
-  //   } catch (error) {
-  //     console.log(error);
-  //   }
-  // }, [
-  //   authenticatedUser,
-  //   chatId,
-  //   dispatch,
-  //   socket,
-  //   peer,
-  //   typeid,
-  //   isReceiver,
-  //   onCall,
-  // ]);
-
   useEffect(() => {
     if (videoStream) {
       peer?.on("call", (call) => {
@@ -264,7 +205,6 @@ export default function WorkspaceLayout({
         const call = peer?.call(peerId, videoStream);
         if (call) {
           call.on("stream", (remoteVideoStream) => {
-            console.log("videref2 answer", videoref);
             setRemoteStream(remoteVideoStream);
           });
         }
@@ -298,40 +238,22 @@ export default function WorkspaceLayout({
 
             if (!isReceiver) {
               if (typeid) {
-                localStorage.setItem("cid", chatId);
+                if (chatId) {
+                  localStorage.setItem("cid", chatId);
+                }
               }
             }
 
             const newchatId = localStorage.getItem("cid");
-
+            console.log("newChatId", newchatId);
             // Emit the "join-room" event when the user starts the call
             socket?.emit("join-room", {
-              roomId: localStorage.getItem("cid"),
+              roomId: newchatId,
               userId,
               peerId: peer?.id,
             });
 
-            if (!onCall) {
-              console.log("emit incomming call");
-              socket?.emit("incomming-call", {
-                chatId: newchatId,
-              });
-            }
-
-            const handleIncomingCall = (data: any) => {
-              const userId = authenticatedUser?._id;
-
-              if (userId !== data.message.sender._id && !onCall) {
-                dispatch(setCallAcceptRejectBox(true));
-
-                localStorage.setItem("cid", data.message.chat);
-                dispatch(setHuddleUserId(data.message.sender._id));
-                setIsReceiver(true);
-              }
-            };
-            if (!onCall) {
-              socket?.on("incomming-call", handleIncomingCall);
-            }
+            socket?.emit("incomming-call", { chatId: chatId });
 
             // Listen for the "room-leave" event to remove the particular video
           } catch (error) {
@@ -346,16 +268,17 @@ export default function WorkspaceLayout({
           setVideoStream(null);
         }
 
-        // socket?.emit("room-leave", {
-        //   roomId: chatId,
-        //   userId: authenticatedUser?._id,
-        // });
         if (onCall) {
           socket?.emit("end-call", {
             roomId: localStorage.getItem("cid"),
           });
         }
         dispatch(setOnCall(false));
+        dispatch(setCallAcceptRejectBox(false));
+        dispatch(setHuddleOn(false));
+        dispatch(setOnCall(false));
+        dispatch(setHuddleSwitchChecked(false));
+        localStorage.removeItem("cid");
         restartPeerConnection();
 
         if (remoteStream) {
@@ -369,58 +292,35 @@ export default function WorkspaceLayout({
 
     return () => {
       socket?.off("join-room");
-      socket?.off("incomming-call");
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [huddleOn, onCall]);
 
-  //for call tone
-  // useEffect(() => {
-  //   console.log("hello");
-  //   if (!socket) {
-  //     console.log("Socket is not initialized");
-  //     return;
-  //   }
-
-  //   const handleIncomingCall = (data: any) => {
-  //     const userId = authenticatedUser?._id;
-
-  //     if (userId !== data.message.sender._id && !onCall) {
-  //       dispatch(setCallAcceptRejectBox(true));
-
-  //       localStorage.setItem("cid", data.message.chat);
-  //       dispatch(setHuddleUserId(data.message.sender._id));
-  //       setIsReceiver(true);
-  //     }
-  //   };
-  //   if (!onCall) {
-  //     socket.on("incomming-call", handleIncomingCall);
-  //   }
-
-  //   // Cleanup
-  //   return () => {
-  //     socket.off("incomming-call", handleIncomingCall);
-  //   };
-  // }, [
-  //   socket,
-  //   chatId,
-  //   typeid,
-  //   dispatch,
-  //   members,
-  //   connectedUsers,
-  //   huddleOn,
-  //   authenticatedUser,
-  //   onCall,
-  //   _id,
-  // ]);
+  //handle incomming call
+  useEffect(() => {
+    socket?.on("incomming-call", ({ chatId, message }) => {
+      setIsReceiver(true);
+      localStorage.setItem("cid", chatId);
+      dispatch(setCallAcceptRejectBox(true));
+      console.log("data incomming calla");
+    });
+    return () => {
+      socket?.off("incomming-call");
+    };
+  }, [huddleOn, socket, dispatch]);
 
   useEffect(() => {
     socket?.on("end-call", () => {
       dispatch(setCallAcceptRejectBox(false));
+      setIsReceiver(false);
 
+      dispatch(setHuddleOn(false));
+      dispatch(setOnCall(false));
+      dispatch(setHuddleSwitchChecked(false));
       localStorage.removeItem("cid");
 
       setRemoteStream(null);
+      toast.success("Call Ended");
     });
 
     socket?.on("connection-lost", () => {
