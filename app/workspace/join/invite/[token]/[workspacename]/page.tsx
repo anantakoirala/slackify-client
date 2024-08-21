@@ -54,9 +54,9 @@ const Page = (props: Props) => {
   const { handleSubmit } = form;
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    axios
+    restApi
       .post(
-        "http://localhost:7000/api/v1/auth/w-login",
+        "/api/v1/auth/w-login",
         { email: data.email, LT: params.token, N: params.workspacename },
         { withCredentials: true }
       )

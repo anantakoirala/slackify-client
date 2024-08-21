@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import OtpInput from "@/components/OtpInput";
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import { restApi } from "@/api";
 
 type Props = {};
 
@@ -19,11 +20,10 @@ const Page = (props: Props) => {
   };
 
   useEffect(() => {
-    console.log("ot", otp.length);
     if (otp.length === 6) {
-      axios
+      restApi
         .post(
-          "http://localhost:7000/api/v1/auth/verify",
+          "/api/v1/auth/verify",
           {
             loginVerificationCode: otp,
           },
