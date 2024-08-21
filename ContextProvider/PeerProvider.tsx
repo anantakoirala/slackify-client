@@ -30,7 +30,7 @@ const PeerProvider = ({ children }: { children: React.ReactNode }) => {
 
   const initializePeer = useCallback(() => {
     const peer = new Peer({
-      host: "localhost",
+      host: `${process.env.NEXT_PUBLIC_PEERHOST}`,
       port: 7000,
       path: "/peerjs",
     });

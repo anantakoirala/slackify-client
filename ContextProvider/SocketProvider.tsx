@@ -11,7 +11,7 @@ const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
   const organizationId = _id;
   const socket: Socket = useMemo(() => {
-    return io("http://localhost:4000", {
+    return io(`${process.env.NEXT_PUBLIC_SOCKETURL}`, {
       withCredentials: true,
       query: { organizationId },
       reconnection: false,
