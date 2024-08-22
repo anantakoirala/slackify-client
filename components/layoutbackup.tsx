@@ -8,12 +8,15 @@ import React, {
 } from "react";
 import "../../../globals.css";
 import SideBar from "@/components/SideBar";
-import WorkSpaceProvider from "@/ContextProvider/WorkSpaceProvider";
+
 import Header from "@/components/dashboard/Header";
-import { Provider, useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { RootState, store } from "@/redux/store";
 import { useParams, useRouter } from "next/navigation";
-import { useFindWorkSpaceQuery } from "@/redux/workspace/workspaceApi";
+import {
+  useFindAllMyWorkspacesQuery,
+  useLazyFindWorkSpaceQuery,
+} from "@/redux/workspace/workspaceApi";
 import { useSound } from "use-sound";
 
 import SocketProvider, {
@@ -27,38 +30,20 @@ import {
   setHuddleUserId,
   setHuddleUserName,
   setOnCall,
-  setSenderUserId,
 } from "@/redux/misc/miscSlice";
-import { Headphones, LucideMaximize } from "lucide-react";
+
 import HuddleDialog from "@/components/dailogs/HuddleDialog";
-import pattern from "../../../../public/backgroundd.png";
-import Image from "next/image";
+
 import { AuthContext } from "@/ContextProvider/AuthProvider";
-import {
-  BiMicrophone,
-  BiMicrophoneOff,
-  BiVideo,
-  BiVideoOff,
-} from "react-icons/bi";
 
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
+import { Drawer, DrawerContent } from "@/components/ui/drawer";
 
-import { LuScreenShare, LuScreenShareOff } from "react-icons/lu";
-import { TbHeadphones, TbHeadphonesOff } from "react-icons/tb";
 import Huddle from "@/components/Huddle";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import CallAcceptRejectDialog from "@/components/dailogs/CallAcceptRejectDialog";
 import { PeerContext } from "@/ContextProvider/PeerProvider";
 import { MediaConnection } from "peerjs";
+import toast from "react-hot-toast";
 
 const config = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -86,8 +71,6 @@ export default function WorkspaceLayout({
 
   const [huddleDialogOpen, setHuddleDialogOpen] = useState(false);
 
-  const [call, setCall] = useState<MediaConnection | null>(null);
-
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const currentCallRef = useRef<MediaConnection | null>(null);
@@ -96,14 +79,13 @@ export default function WorkspaceLayout({
   const [screenSharing, setScreenSharing] = React.useState(false);
   const [audioEnabled, setAudioEnabled] = React.useState(true);
   const [videoEnabled, setVideoEnabled] = React.useState(true);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [isReceiver, setIsReceiver] = useState<boolean>(false);
 
   const [playRingtone] = useSound("/sounds/ringtone.mp3");
 
   const pcRefs = React.useRef<Record<string, RTCPeerConnection>>({});
-  const [connectedUsers, setConnectedUsers] = React.useState<ConnectedUsers>(
-    {}
-  );
+  const [connectedUsers, setConnectedUsers] = React.useState([]);
 
   const [connectedUser, setConnectedUser] = useState<string[]>([]);
 
@@ -115,7 +97,6 @@ export default function WorkspaceLayout({
   const isLargeScreen = useMediaQuery("(min-width:640px)");
 
   const changeHuddleDialogState = () => {
-    console.log("close bhayo");
     setHuddleDialogOpen((prev) => !prev);
     // in small screen if the modal is closed the video chat ends
     if (isLargeScreen === false) {
@@ -124,11 +105,16 @@ export default function WorkspaceLayout({
       dispatch(setHuddleShow(false));
       dispatch(setHuddleUserName(""));
       dispatch(setHuddleSwitchChecked(false));
+    } else {
     }
   };
 
-  const { data, isLoading, isError, error } = useFindWorkSpaceQuery(id);
-
+  // const { data, isLoading, isError, error, refetch } =
+  //   useFindWorkSpaceQuery(id);
+  const [trigger, { data, isLoading, isError, error }] =
+    useLazyFindWorkSpaceQuery();
+  const { data: myWorkspaces, isLoading: myWorkspaceLoading } =
+    useFindAllMyWorkspacesQuery();
   const { name, _id } = useSelector((state: RootState) => state.workspace);
   const { huddleShow, huddleOn, type, huddleUserName, showSideBar, onCall } =
     useSelector((state: RootState) => state.misc);
@@ -201,69 +187,12 @@ export default function WorkspaceLayout({
     }
   };
 
-  const setUpPeerConnection = useCallback(async (user: string) => {
-    try {
-      if (pcRefs.current[user]) {
-        console.log(`Peer connection for user ${user} already exists.`);
-        return;
-      }
-
-      const localstream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: true,
-      });
-
-      setVideoStream(localstream);
-
-      if (videoref.current) {
-        videoref.current.srcObject = localstream; // Display local video in videoref
-      }
-    } catch (error) {
-      console.error("Error setting up peer connection:", error);
-    }
-  }, []);
-
-  // Function to send an SDP offer to another user
-
-  const setUpWebRTC = useCallback(async () => {
-    try {
-      console.log("call started");
-      const userId = authenticatedUser?._id;
-
-      await setUpPeerConnection(userId as string);
-
-      // Emit the "join-room" event when the user starts the call
-      socket?.emit("join-room", {
-        roomId: chatId,
-        userId,
-        peerId: peer?.id,
-      });
-
-      // Listen for the "room-leave" event to remove the particular video
-      socket?.on("room-leave", async (data) => {
-        console.log("roomleave", data);
-
-        setUserIdLeavingRoom(data.leftUserId);
-
-        // Clear video element sources
-
-        // if (videoref2.current) {
-        //   videoref2.current.srcObject = null;
-        // }
-      });
-    } catch (error) {
-      console.log(error);
-    }
-  }, [authenticatedUser, chatId, setUpPeerConnection, socket, peer]);
-
   useEffect(() => {
     if (videoStream) {
       peer?.on("call", (call) => {
         call.answer(videoStream);
         call.on("stream", (remoteVideoStream) => {
-          if (videoref2.current) {
-            videoref2.current.srcObject = remoteVideoStream; // Display local video in videoref
-          }
+          setRemoteStream(remoteVideoStream);
         });
       });
     }
@@ -271,162 +200,139 @@ export default function WorkspaceLayout({
     socket?.on("join-room", ({ roomId, newUserId, peerId }) => {
       console.log(`User ${newUserId} joined room ${roomId}`);
 
-      setConnectedUser((prevUsers) => {
-        if (!prevUsers.includes(newUserId)) {
-          console.log("Adding User:", newUserId);
-          return [...prevUsers, newUserId];
-        } else {
-          console.log("User already connected:", newUserId);
-          return prevUsers;
-        }
-      });
-      //dispatch(setOnCall(true));
-
       //make call to another user
 
       if (videoStream) {
-        console.log("second");
         const call = peer?.call(peerId, videoStream);
         if (call) {
           call.on("stream", (remoteVideoStream) => {
-            console.log("videref2 answer", videoref);
-            if (videoref2.current) {
-              videoref2.current.srcObject = remoteVideoStream; // Display local video in videoref
-            }
             setRemoteStream(remoteVideoStream);
           });
-          setCall(call);
         }
       }
     });
   }, [videoStream, socket, peer, dispatch]);
 
   useEffect(() => {
-    console.log("Component re-rendered. Connected Users:", connectedUser);
-  }, [connectedUser]);
+    const initiateCall = async () => {
+      if (huddleOn) {
+        if (!onCall) {
+          try {
+            console.log("call started");
+            const userId = authenticatedUser?._id;
 
-  useEffect(() => {
-    async function stopStream() {
-      const userId = authenticatedUser?._id;
-      if (videoStream) {
-        videoStream?.getTracks().forEach((track) => track.stop());
+            try {
+              const localstream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: true,
+              });
 
-        // Clear video element sources
-        if (videoref.current) {
-          videoref.current.srcObject = null;
-        }
-        if (videoref2.current) {
-          videoref2.current.srcObject = null;
-        }
+              setVideoStream(localstream);
+              dispatch(setOnCall(true));
 
-        console.log("pcrefs", pcRefs);
-        if (userId) {
-          console.log("userId", userId);
+              if (videoref.current) {
+                videoref.current.srcObject = localstream; // Display local video in videoref
+              }
+            } catch (error) {
+              console.error("Error setting up peer connection:", error);
+            }
 
-          console.log("userIdLeavingRoom", userId);
-          if (pcRefs.current[userId]) {
-            pcRefs.current[userId].close();
+            if (!isReceiver) {
+              if (typeid) {
+                if (chatId) {
+                  localStorage.setItem("cid", chatId);
+                }
+              }
+            }
+
+            const newchatId = localStorage.getItem("cid");
+            console.log("newChatId", newchatId);
+            // Emit the "join-room" event when the user starts the call
+            socket?.emit("join-room", {
+              roomId: newchatId,
+              userId,
+              peerId: peer?.id,
+            });
+
+            socket?.emit("incomming-call", { chatId: chatId });
+
+            // Listen for the "room-leave" event to remove the particular video
+          } catch (error) {
+            console.log(error);
           }
-          //logActivePeerConnections();
+        }
+      } else {
+        setConnectedUser([]);
+        setIsReceiver(false);
+        if (videoStream) {
+          videoStream.getTracks().forEach((track) => track.stop());
+          setVideoStream(null);
+        }
 
-          //console.log("pcrefs", pcRefs.current[userId]);
+        if (onCall) {
+          socket?.emit("end-call", {
+            roomId: localStorage.getItem("cid"),
+          });
+        }
+        dispatch(setOnCall(false));
+        dispatch(setCallAcceptRejectBox(false));
+        dispatch(setHuddleOn(false));
+        dispatch(setOnCall(false));
+        dispatch(setHuddleSwitchChecked(false));
+        localStorage.removeItem("cid");
+        restartPeerConnection();
+
+        if (remoteStream) {
+          remoteStream.getTracks().forEach((track) => track.stop());
+          setRemoteStream(null);
         }
       }
-    }
-    if (huddleOn) {
-      // console.log("connectd users", Object.keys(connectedUsers));
-      // const userId = authenticatedUser?._id;
-      // setUpWebRTC();
-      console.log("length", connectedUser);
-      if (connectedUser.length === 0) {
-        setUpWebRTC();
-      }
-    } else {
-      // if (currentCallRef.current) {
-      //   currentCallRef.current.close();
-      //   currentCallRef.current = null;
-      // }
+    };
 
-      setConnectedUser((prevUsers) => prevUsers.filter((u) => u !== typeid));
-
-      if (videoStream) {
-        videoStream.getTracks().forEach((track) => track.stop());
-        setVideoStream(null);
-      }
-
-      socket?.emit("room-leave", {
-        roomId: chatId,
-        userId: authenticatedUser?._id,
-      });
-
-      restartPeerConnection();
-
-      if (remoteStream) {
-        remoteStream.getTracks().forEach((track) => track.stop());
-        setRemoteStream(null);
-
-        call?.close();
-      }
-    }
+    initiateCall();
 
     return () => {
-      // Clean up resources (close the peer connections, stop media streams, etc.)
-      // for (const user in pcRefs.current) {
-      //   if (pcRefs.current[user]) {
-      //     // eslint-disable-next-line react-hooks/exhaustive-deps
-      //     pcRefs.current[user].close();
-      //   }
-      // }
       socket?.off("join-room");
-
-      socket?.off("room-leave");
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [huddleOn]);
+  }, [huddleOn, onCall]);
 
-  //for call tone
+  //handle incomming call
   useEffect(() => {
-    if (!socket) {
-      console.log("Socket is not initialized");
-      return;
-    }
-
-    const handleIncomingCall = (data: any) => {
-      const userId = authenticatedUser?._id;
-
-      if (userId !== data.message.sender._id && !onCall) {
-        dispatch(setCallAcceptRejectBox(true));
-        dispatch(setOnCall(true));
-      }
-    };
-
-    if (huddleOn && Object.keys(connectedUsers).length !== 1 && !onCall) {
-      socket.emit("incomming-call", {
-        chatId,
-        members: members.map((member) => member._id),
-        targetId: typeid,
-        organizationId: _id,
-      });
-    }
-
-    socket.on("incomming-call", handleIncomingCall);
-
-    // Cleanup
+    socket?.on("incomming-call", ({ chatId, message }) => {
+      setIsReceiver(true);
+      localStorage.setItem("cid", chatId);
+      dispatch(setCallAcceptRejectBox(true));
+      console.log("data incomming calla");
+    });
     return () => {
-      socket.off("incomming-call", handleIncomingCall);
+      socket?.off("incomming-call");
     };
-  }, [
-    socket,
-    chatId,
-    typeid,
-    dispatch,
-    members,
-    connectedUsers,
-    huddleOn,
-    authenticatedUser,
-    onCall,
-    _id,
-  ]);
+  }, [huddleOn, socket, dispatch]);
+
+  useEffect(() => {
+    socket?.on("end-call", () => {
+      dispatch(setCallAcceptRejectBox(false));
+      setIsReceiver(false);
+
+      dispatch(setHuddleOn(false));
+      dispatch(setOnCall(false));
+      dispatch(setHuddleSwitchChecked(false));
+      dispatch(setHuddleUserId(""));
+      localStorage.removeItem("cid");
+
+      setRemoteStream(null);
+      toast.success("Call Ended");
+    });
+
+    socket?.on("connection-lost", () => {
+      dispatch(setCallAcceptRejectBox(false));
+    });
+
+    return () => {
+      socket?.off("end-call");
+    };
+  }, [socket, dispatch]);
 
   useEffect(() => {
     if (isLargeScreen) {
@@ -449,7 +355,6 @@ export default function WorkspaceLayout({
   }, [type, dispatch]);
 
   useEffect(() => {
-    console.log("remoteStream", remoteStream);
     if (videoStream && videoref.current) {
       videoref.current.srcObject = videoStream;
     }
@@ -478,7 +383,11 @@ export default function WorkspaceLayout({
     };
   }, []);
 
-  if (isLoading) {
+  useEffect(() => {
+    trigger(id);
+  }, [id, trigger]);
+
+  if (isLoading && myWorkspaceLoading) {
     return <>Loading...</>;
   }
 
@@ -502,7 +411,7 @@ export default function WorkspaceLayout({
           toggleAudio={toggleAudio}
         />
       )}
-      <CallAcceptRejectDialog />
+      <CallAcceptRejectDialog setHuddleDialogOpen={setHuddleDialogOpen} />
 
       <Drawer direction="left" open={isOpen} onOpenChange={setIsOpen}>
         <DrawerContent className="h-full w-[80%]">
@@ -521,89 +430,21 @@ export default function WorkspaceLayout({
           </div>
           {/* webcam section */}
           {huddleOn && !huddleDialogOpen && (
-            <div
-              className={`w-full  bg-card ${
-                huddleOn ? "h-40 items-start" : "hidden items-center"
-              } border border-primary rounded-tl-md rounded-tr-md absolute bottom-0 flex flex-col px-2 `}
-            >
-              <div className="flex flex-row justify-between items-center w-full ">
-                <div className="text-primary text-sm">{huddleUserName}</div>
-                <LucideMaximize
-                  onClick={handleHuddleDialogOpen}
-                  className="text-primary text-sm w-3"
-                />
-              </div>
-              <div
-                className="w-full h-full  mb-1 rounded-sm"
-                style={{
-                  backgroundImage: `url(${pattern.src})`,
-                  objectFit: "cover",
-                }}
-              >
-                {/* video here */}
-                <div className="flex flex-row w-full h-[75%] gap-1 pt-1 px-2 ">
-                  <div className="flex-1 h-full bg-red-500 rounded-md">
-                    <video
-                      autoPlay
-                      ref={videoref}
-                      playsInline
-                      className={`w-full h-full object-cover rounded-md ${
-                        !videoEnabled ? "hidden" : ""
-                      }`}
-                    ></video>
-                    {!videoEnabled && (
-                      <div className="w-full h-full bg-red-500 rounded-md"></div>
-                    )}
-                  </div>
-                  <div className="flex-1 h-full bg-lime-600 rounded-md">
-                    {videoEnabled ? (
-                      <video
-                        autoPlay
-                        ref={videoref2}
-                        playsInline
-                        className="w-full h-full object-cover rounded-md second"
-                      ></video>
-                    ) : (
-                      <div className="w-full h-full bg-lime-600 rounded-md"></div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-row w-full h-[21%]  mb-1 mt-1 px-2 items-center justify-center">
-                  <div
-                    onClick={toggleVideo}
-                    className="bg-primary rounded-md w-[1.9rem] h-[1.9rem] flex items-center justify-center m-1"
-                  >
-                    {!videoEnabled ? (
-                      <BiVideoOff size="1.7rem" className="text-red-500" />
-                    ) : (
-                      <BiVideo size="1.8rem" />
-                    )}
-                  </div>
-                  <div
-                    onClick={toggleAudio}
-                    className="bg-primary rounded-md w-[1.9rem] h-[1.9rem] flex items-center justify-center m-1"
-                  >
-                    {!audioEnabled ? (
-                      <BiMicrophoneOff size="4rem" />
-                    ) : (
-                      <BiMicrophone size="4rem" />
-                    )}
-                  </div>
-                  <div
-                    onClick={
-                      screenSharing ? stopScreenSharing : startScreenSharing
-                    }
-                    className="bg-primary rounded-md w-[1.9rem] h-[1.9rem] flex items-center justify-center m-1"
-                  >
-                    {screenSharing ? (
-                      <LuScreenShareOff size="1.6rem" />
-                    ) : (
-                      <LuScreenShare size="1.6rem" />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <Huddle
+              huddleOn={huddleOn}
+              huddleUserName={huddleUserName}
+              handleHuddleDialogOpen={handleHuddleDialogOpen}
+              videoref={videoref}
+              videoref2={videoref2}
+              videoEnabled={videoEnabled}
+              audioEnabled={audioEnabled}
+              screenSharing={screenSharing}
+              toggleVideo={toggleVideo}
+              toggleAudio={toggleAudio}
+              startScreenSharing={startScreenSharing}
+              stopScreenSharing={stopScreenSharing}
+              remoteStream={remoteStream}
+            />
           )}
           {/* webcam section ends */}
         </div>
