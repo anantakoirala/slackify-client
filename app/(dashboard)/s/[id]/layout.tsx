@@ -105,6 +105,7 @@ export default function WorkspaceLayout({
       dispatch(setHuddleShow(false));
       dispatch(setHuddleUserName(""));
       dispatch(setHuddleSwitchChecked(false));
+    } else {
     }
   };
 
@@ -317,6 +318,7 @@ export default function WorkspaceLayout({
       dispatch(setHuddleOn(false));
       dispatch(setOnCall(false));
       dispatch(setHuddleSwitchChecked(false));
+      dispatch(setHuddleUserId(""));
       localStorage.removeItem("cid");
 
       setRemoteStream(null);
@@ -409,7 +411,7 @@ export default function WorkspaceLayout({
           toggleAudio={toggleAudio}
         />
       )}
-      <CallAcceptRejectDialog />
+      <CallAcceptRejectDialog setHuddleDialogOpen={setHuddleDialogOpen} />
 
       <Drawer direction="left" open={isOpen} onOpenChange={setIsOpen}>
         <DrawerContent className="h-full w-[80%]">

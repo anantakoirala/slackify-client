@@ -13,6 +13,7 @@ type InitialState = {
   huddleSwitchChecked: boolean;
   callAcceptRejectBox: boolean;
   onCall: boolean;
+  huddleDialogOpen: boolean;
 };
 
 const initialState: InitialState = {
@@ -28,6 +29,7 @@ const initialState: InitialState = {
   huddleSwitchChecked: false,
   callAcceptRejectBox: false,
   onCall: false,
+  huddleDialogOpen: false,
 };
 
 export const miscSlice = createSlice({
@@ -71,6 +73,9 @@ export const miscSlice = createSlice({
     setOnCall: (state, action) => {
       state.onCall = action.payload;
     },
+    setHuddleDialogOpen: (state, action) => {
+      state.huddleDialogOpen = action.payload;
+    },
   },
 });
 
@@ -87,4 +92,5 @@ export const {
   setHuddleSwitchChecked,
   setCallAcceptRejectBox,
   setOnCall,
+  setHuddleDialogOpen,
 } = miscSlice.actions;

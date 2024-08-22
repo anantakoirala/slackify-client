@@ -160,7 +160,7 @@ const SideBar = ({ showSideBar, isLargeScreen, isOpen, setIsOpen }: Props) => {
     restApi
       .get("/api/v1/auth/logout")
       .then((res) => {
-        console.log("res", res);
+        console.log("res", res.data.success);
         route.push("/");
       })
       .catch((error) => console.log(error));

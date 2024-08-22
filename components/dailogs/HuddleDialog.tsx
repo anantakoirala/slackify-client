@@ -67,7 +67,12 @@ const HuddleDialog = ({
       onOpenChange={changeHuddleDialogState}
       modal
     >
-      <DialogContent className="w-full max-w-xs sm:max-w-6xl">
+      <DialogContent
+        className="w-full max-w-xs sm:max-w-6xl"
+        onInteractOutside={(e) => {
+          e.preventDefault();
+        }}
+      >
         <div
           className="w-full h-[75vh] flex flex-col items-center justify-center"
           style={{

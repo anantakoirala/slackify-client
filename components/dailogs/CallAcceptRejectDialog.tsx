@@ -1,5 +1,11 @@
 "use client";
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, {
+  SetStateAction,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,10 +32,13 @@ import SocketProvider, {
   SocketContext,
 } from "@/ContextProvider/SocketProvider";
 import { AuthContext } from "@/ContextProvider/AuthProvider";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
-type Props = {};
+type Props = {
+  setHuddleDialogOpen: React.Dispatch<SetStateAction<boolean>>;
+};
 
-const CallAcceptRejectDialog = (props: Props) => {
+const CallAcceptRejectDialog = ({ setHuddleDialogOpen }: Props) => {
   const [playRingtone] = useSound("/sounds/ringtone.mp3");
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [stateChage, setStateChange] = useState(false);
@@ -43,12 +52,19 @@ const CallAcceptRejectDialog = (props: Props) => {
     dispatch(setCallAcceptRejectBox(false));
   };
 
+  const isLargeScreen = useMediaQuery("(min-width:640px)");
   const handleOnAccept = () => {
     const userId = authenticatedUser?._id;
     // socket?.emit("join-room", {
     //   roomId: chatId,
     //   userId,
     // });
+    if (!isLargeScreen) {
+      setHuddleDialogOpen(true);
+      dispatch(setCallAcceptRejectBox(false));
+      dispatch(setHuddleOn(true));
+      dispatch(setHuddleSwitchChecked(true));
+    }
     dispatch(setCallAcceptRejectBox(false));
     dispatch(setHuddleOn(true));
     dispatch(setHuddleSwitchChecked(true));
