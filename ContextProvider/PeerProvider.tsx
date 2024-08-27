@@ -33,6 +33,7 @@ const PeerProvider = ({ children }: { children: React.ReactNode }) => {
       host: `${process.env.NEXT_PUBLIC_PEERHOST}`,
       port: 7000,
       path: "/peerjs",
+      secure: true,
     });
 
     peer.on("open", (id) => {
