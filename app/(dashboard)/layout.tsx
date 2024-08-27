@@ -1,8 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import SideBar from "@/components/SideBar";
-import WorkSpaceProvider from "@/ContextProvider/WorkSpaceProvider";
-import Header from "@/components/dashboard/Header";
+
 import { Provider, useSelector } from "react-redux";
 import { RootState, store } from "@/redux/store";
 import SocketProvider from "@/ContextProvider/SocketProvider";

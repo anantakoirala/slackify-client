@@ -100,7 +100,7 @@ const Page = (props: Props) => {
 
   useEffect(() => {
     const type = localStorage.getItem("type");
-
+    console.log("type", type);
     if (_id) {
       const fetchChat = async () => {
         const response = await createNewChat({
@@ -126,7 +126,9 @@ const Page = (props: Props) => {
 
   // find users that are not in channel but in workspace
   useEffect(() => {
+    console.log("type", type);
     const fetchChannelUsers = async () => {
+      console.log("typeid in page", typeid);
       const response = await getChannelUsers({
         channelId: typeid,
         organisationId: id,
