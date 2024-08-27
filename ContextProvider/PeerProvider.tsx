@@ -37,7 +37,7 @@ const PeerProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     peer.on("open", (id) => {
-      //console.log("Connected with Peer ID:", id);
+      console.log("Connected with Peer ID:", id);
     });
 
     peer.on("error", (err) => {
