@@ -27,13 +27,13 @@ export const PeerContext = createContext<PeerContextValue>(defaultContextValue);
 const PeerProvider = ({ children }: { children: React.ReactNode }) => {
   const { _id } = useSelector((state: RootState) => state.workspace);
   const [peerInstance, setPeerInstance] = useState<Peer | null>(null);
-
+  console.log("node_env", process.env.NODE_ENV);
   const initializePeer = useCallback(() => {
     const peer = new Peer({
-      host: `${process.env.NEXT_PUBLIC_PEERHOST}`,
-
+      host: process.env.NEXT_PUBLIC_PEERHOST,
+      ...(process.env.NODE_ENV === "development" && { port: 7000 }), // Include port only in development
       path: "/peerjs",
-      secure: true,
+      secure: process.env.NODE_ENV !== "development", // Secure connection in production
     });
 
     peer.on("open", (id) => {
